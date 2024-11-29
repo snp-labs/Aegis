@@ -1,18 +1,18 @@
 mod send_tests {
+    use crate::cbdc::circuits::receive_circuit::ReceiveCircuit;
     use crate::cbdc::tests::import::*;
-    use crate::cbdc::circuits::send_circuit::SendCircuit;
     #[test]
     fn test_constraints() {
         use ark_relations::r1cs::ConstraintSynthesizer;
 
         let test_input =
-            <SendCircuit<C, GG> as MockingCircuit<C, GG>>::generate_circuit(32)
+            <ReceiveCircuit<C, GG> as MockingCircuit<C, GG>>::generate_circuit(32)
                 .unwrap();
 
         let cs = ark_relations::r1cs::ConstraintSystem::new_ref();
 
         test_input.clone().generate_constraints(cs.clone()).unwrap();
         assert!(cs.is_satisfied().unwrap());
-        println!("[Send] Number of constraints: {}", cs.num_constraints());
+        println!("[Receive] Number of constraints: {}", cs.num_constraints());
     }
 }
