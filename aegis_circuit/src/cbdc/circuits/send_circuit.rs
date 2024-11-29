@@ -1,36 +1,4 @@
-use crate::gadget::{
-    hashes::poseidon::poseidon_params::get_poseidon_params, 
-    symmetric_encrytions::{
-        symmetric::{self, constraints::SymmetricEncryptionSchemeGadget},
-        constraints::SymmetricEncryptionGadget
-    },
-    merkle_tree
-};
-use crate::cbdc::tree_config::{MerkleTreeParams, MerkleTreeParamsVar};
-use ark_crypto_primitives::{
-    crh::{
-        poseidon::{
-            constraints::{CRHGadget, CRHParametersVar},
-            CRH,
-        },
-        CRHSchemeGadget,
-    },
-    sponge::{poseidon::PoseidonConfig, Absorb},
-    encryption::{elgamal::{self, constraints::ElGamalEncGadget}, AsymmetricEncryptionGadget}
-};
-use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
-use ark_std::marker::PhantomData;
-use ark_ec::CurveGroup;
-use ark_ff::{Field, PrimeField};
-use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
-use ark_serialize::CanonicalSerialize;
-use num_bigint::BigUint;
-use std::cmp::Ordering;
-use rand::thread_rng;
-use std::fs::File;
-use std::io::Write;
-
-use crate::cbdc::MockingCircuit;
+use crate::cbdc::circuits::import::*;
 
 pub type ConstraintF<C> = <<C as CurveGroup>::BaseField as Field>::BasePrimeField;
 
@@ -106,9 +74,9 @@ where
 {
     fn generate_constraints(
         self,
-        cs: ark_relations::r1cs::ConstraintSystemRef<C::BaseField>,
+        cs: ConstraintSystemRef<C::BaseField>,
     ) -> Result<(), SynthesisError> {
-        // constants
+        //////////////////// constants //////////////////////////
         let hash_params =
             CRHParametersVar::<C::BaseField>::new_constant(cs.clone(), self.hash_params)?;
         let G = elgamal::constraints::ParametersVar::new_constant(
@@ -116,7 +84,8 @@ where
             self.G,
         )?;
 
-        // statement
+
+        //////////////////// instance //////////////////////////
         let sn_cur = FpVar::new_input(ark_relations::ns!(cs, "sn_cur"), || {
             self.instance.sn_cur.ok_or(SynthesisError::AssignmentMissing)
         })?;
@@ -144,27 +113,27 @@ where
                 self.instance.ct_bar.ok_or(SynthesisError::AssignmentMissing)
             })?;
         let ct_bar = vec![
-            symmetric::constraints::CiphertextVar {
+            CiphertextVar {
                 c: ct_bar[0].clone(),
                 r: FpVar::zero(),
             },
-            symmetric::constraints::CiphertextVar {
+            CiphertextVar {
                 c: ct_bar[1].clone(),
                 r: FpVar::one(),
             },
-            symmetric::constraints::CiphertextVar {
+            CiphertextVar {
                 c: ct_bar[2].clone(),
                 r: FpVar::one() + FpVar::one(),
             },
-            symmetric::constraints::CiphertextVar {
+            CiphertextVar {
                 c: ct_bar[3].clone(),
                 r: FpVar::one() + FpVar::one() + FpVar::one(),
             },
-            symmetric::constraints::CiphertextVar {
+            CiphertextVar {
                 c: ct_bar[4].clone(),
                 r: FpVar::one() + FpVar::one() + FpVar::one() + FpVar::one(),
             },
-            symmetric::constraints::CiphertextVar {
+            CiphertextVar {
                 c: ct_bar[5].clone(),
                 r: FpVar::one() + FpVar::one() + FpVar::one() + FpVar::one() + FpVar::one(),
             },
@@ -181,7 +150,8 @@ where
             _curve: PhantomData,
         };
 
-        // witness
+
+        //////////////////// witness //////////////////////////
         let sk_snd = FpVar::new_witness(ark_relations::ns!(cs, "sk_snd"), || {
             self.witness.sk_snd.ok_or(SynthesisError::AssignmentMissing)
         })?;
@@ -243,20 +213,14 @@ where
             || self.witness.k_point_x.ok_or(SynthesisError::AssignmentMissing),
         )?;
 
+
         //////////////////// constraints //////////////////////////
-
-        // check k == g(k_point_x, _k_point_y)
-        let check_g_k_point_x = k.plaintext.to_bits_le()?;
-        let check_g_k_point_x =
-            Boolean::le_bits_to_fp_var(&check_g_k_point_x[..check_g_k_point_x.len() / 2])?;
-        check_g_k_point_x.enforce_equal(&k_point_x.k)?;
-
-        // pk_snd = G^{sk_snd}
+        // 1. pk_snd = G^{sk_snd}
         let sk_snd_le_bits = sk_snd.to_bits_le().unwrap();
         let pk_snd_computed = G.generator.scalar_mul_le(sk_snd_le_bits.iter()).unwrap();
         pk_snd.pk.enforce_equal(&pk_snd_computed)?;
 
-        // addr_snd = H(pk_snd)
+        // 2.addr_snd = H(pk_snd)
         let binding = pk_snd.clone().pk.to_bits_le()?;
         let pk_snd_point_x = Boolean::le_bits_to_fp_var(&binding[..binding.len() / 2])?;
         let pk_snd_point_y = Boolean::le_bits_to_fp_var(&binding[binding.len() / 2..])?;
@@ -266,19 +230,19 @@ where
             CRHGadget::<C::BaseField>::evaluate(&hash_params, &hash_intput).unwrap();
         addr_snd_computed.enforce_equal(&addr_snd)?;
 
-        // sn_cur = H(sk_snd, o_cur)
+        // 3. sn_cur = H(sk_snd, o_cur)
         let hash_input = [sk_snd.clone(), o_cur.clone()];
         let sn_cur_computed =
             CRHGadget::<C::BaseField>::evaluate(&hash_params, &hash_input).unwrap();
         sn_cur_computed.enforce_equal(&sn_cur)?;
 
-        // sn_new = H(sk_snd, o_new)
+        // 4. sn_new = H(sk_snd, o_new)
         let hash_input = [sk_snd.clone(), o_new.clone()];
         let sn_new_computed =
             CRHGadget::<C::BaseField>::evaluate(&hash_params, &hash_input).unwrap();
         sn_new_computed.enforce_equal(&sn_new)?;
-
-        // MT.Verify(cm_cur, path, rt)
+        
+        // 5. MT.Verify(cm_cur, path, rt)
         let leaf_g: Vec<_> = vec![cm_cur.clone()];
 
         cw.set_leaf_position(leaf_pos.clone());
@@ -288,7 +252,7 @@ where
             .unwrap();
         path_check.enforce_equal(&Boolean::Constant(true))?;
 
-        // cm_cur = H(addr_snd, v_cur, sn_cur, o_cur)
+        // 6. cm_cur = H(addr_snd, v_cur, sn_cur, o_cur)
         let hash_input = vec![
             addr_snd.clone(),
             v_cur.clone(),
@@ -298,8 +262,8 @@ where
         let cm_cur_computed =
             CRHGadget::<C::BaseField>::evaluate(&hash_params, &hash_input).unwrap();
         cm_cur.enforce_equal(&cm_cur_computed)?;
-
-        // cm_new = H(addr_snd, v_cur - v, sn_new, o_new)
+        
+        // 7. cm_new = H(addr_snd, v_cur - v, sn_new, o_new)
         let hash_input = vec![
             addr_snd.clone(),
             v_cur.clone() - v.clone(),
@@ -310,12 +274,12 @@ where
             CRHGadget::<C::BaseField>::evaluate(&hash_params, &hash_input).unwrap();
         cm_new.enforce_equal(&cm_new_computed)?;
 
-        // v_cur >= v >= 0
+        // 8. v_cur >= v >= 0
         let v_cur_minus_v = v_cur.clone() - v.clone();
         v_cur_minus_v.enforce_smaller_or_equal_than_mod_minus_one_div_two()?;
         v.enforce_smaller_or_equal_than_mod_minus_one_div_two()?;
 
-        // cm_v = H(addr_snd, v, pk_rcv, sn_new, o_v)
+        // 9. cm_v = H(addr_snd, v, pk_rcv, sn_new, o_v)
         let binding = pk_rcv.clone().pk.to_bits_le()?;
         let pk_rcv_point_x = Boolean::le_bits_to_fp_var(&binding[..binding.len() / 2])?;
         let pk_rcv_point_y = Boolean::le_bits_to_fp_var(&binding[binding.len() / 2..])?;
@@ -331,15 +295,22 @@ where
         let cm_v_computed = CRHGadget::<C::BaseField>::evaluate(&hash_params, &hash_input).unwrap();
         cm_v.enforce_equal(&cm_v_computed)?;
 
-        // auth = H(sk_snd, tag)
+        // 10. auth = H(sk_snd, tag)
         let hash_input = vec![sk_snd.clone(), tag.clone()];
         let auth_computed = CRHGadget::<C::BaseField>::evaluate(&hash_params, &hash_input).unwrap();
         auth_computed.enforce_equal(&auth)?;
 
-        // ct_bar = PEnc(apk, (addr_snd, v, o_v, sn_cur, pk_rcv))
+        // 11. ct_bar = PEnc(apk, (addr_snd, v, o_v, sn_cur, pk_rcv))
         let k_a_computed =
             ElGamalEncGadget::<C, GG>::encrypt(&G.clone(), &k.clone(), &r, &apk).unwrap();
         k_a.enforce_equal(&k_a_computed)?;
+
+
+        // check k == g(k_point_x, _k_point_y)
+        let check_g_k_point_x = k.plaintext.to_bits_le()?;
+        let check_g_k_point_x =
+            Boolean::le_bits_to_fp_var(&check_g_k_point_x[..check_g_k_point_x.len() / 2])?;
+        check_g_k_point_x.enforce_equal(&k_point_x.k)?;
 
         // check ct_bar
         let binding = pk_rcv.clone().pk.to_bits_le()?;
@@ -590,7 +561,6 @@ where
 
         // 파일에 저장
         let mut file =
-            // File::create("./contract/result/send.input.json").expect("파일 생성에 실패했습니다.");
             File::create("../aegis_contract/result/send.input.json").expect("파일 생성에 실패했습니다.");
             
         file.write_all(json_data.as_bytes())
