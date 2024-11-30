@@ -36,4 +36,14 @@ contract PoseidonMerkleTree is BaseMerkleTree {
         bytes32 root = _recomputeRoot(1);
         return uint256(root);
     }
+
+    function insert_two_element(uint256 cm1, uint256 cm2) public returns (uint256) {
+        _insert_two_element(bytes32(cm1), bytes32(cm2));
+        bytes32 root = _recomputeRoot(1);
+        return uint256(root);
+    }
+
+    function convertUintToBytes(uint256 u) public pure returns (bytes32) {
+        return bytes32(u);
+    }
 }
