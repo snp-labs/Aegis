@@ -79,6 +79,8 @@ abstract contract BaseMerkleTree is Initializable {
         );
 
         // A hash of commitment is appended to merkle tree 
+        // Updated _hash(commitment, commitment) to _hash(commitment, 0) to align with Poseidon hash specifications.
+        // The second input is fixed to 0 for consistency in Merkle tree leaf hashing
         bytes32 hashed_commitment = _hash(commitment, 0);
 
         // Address of the next leaf is the current number of leaves (before
