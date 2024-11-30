@@ -40,3 +40,18 @@ where
 
     fn generate_circuit() -> Result<Self::Output, Error>;
 }
+
+
+pub trait MockingSha256Circuit<C, GG>
+where
+    C: CurveGroup,
+    GG: CurveVar<C, C::BaseField>,
+    <C as CurveGroup>::BaseField: PrimeField,
+    for<'a> &'a GG: GroupOpsBounds<'a, C, GG>,
+{
+    type F;
+    type H;
+    type Output;
+
+    fn generate_circuit() -> Result<Self::Output, Error>;
+}

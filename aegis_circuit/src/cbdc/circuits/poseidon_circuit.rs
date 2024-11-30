@@ -12,7 +12,7 @@ use ark_crypto_primitives::{
     sponge::{poseidon::PoseidonConfig, Absorb},
 };
 use ark_ec::CurveGroup;
-use ark_ff::{Field, PrimeField};
+use ark_ff::{BigInteger, Field, PrimeField};
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{
     ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, SynthesisError,
@@ -101,14 +101,21 @@ where
     fn generate_circuit() -> Result<Self::Output, crate::Error> {
         use ark_ec::AffineRepr;
         use ark_std::UniformRand;
+        use ark_std::Zero;
         let mut rng = thread_rng();
         let hash_params: PoseidonConfig<<<C as CurveGroup>::Affine as AffineRepr>::BaseField> =
             get_poseidon_params();
         let message = Self::F::rand(&mut rng);
+        // let message = Self::F::from(256u64);
         let digest = Self::H::evaluate(&hash_params, vec![message]).unwrap();
+        let digest_bigint = digest.into_bigint();
+        let digest_bytes = digest_bigint.to_bytes_le();
 
         println!("message: {:?}", message.to_string());
         println!("digest: {:?}", digest.to_string());
+        println!("digest bit length {:?}", digest_bigint.num_bits());
+        
+
         Ok(PoseidonCircuit::new(hash_params, digest, message))
     }
 }
@@ -123,6 +130,8 @@ mod test {
     use ark_ff::Field;
     use ark_groth16::Groth16;
     use ark_relations::r1cs::ConstraintSystem;
+    use ark_std::Zero;
+    use ark_std::UniformRand;
 
     type C = ark_ed_on_bn254::EdwardsProjective;
     type GG = ark_ed_on_bn254::constraints::EdwardsVar;
@@ -133,6 +142,24 @@ mod test {
             <PoseidonCircuit<C, GG> as MockingHashCircuit<C, GG>>::generate_circuit().unwrap();
         test_circuit
     }
+
+    fn make_ark_matrix() -> Vec<Vec<String>> {
+        let mut rng = thread_rng();
+        let mut ark = vec![vec![String::new(); 3]; 8 + 57];
+        for i in 0..8 + 57 {
+            for j in 0..3 {
+                let field_element = F::rand(&mut rng);
+                ark[i][j] = field_element.to_string();
+            }
+        }
+        ark
+    }
+
+    // #[test]
+    // fn test_ark_matrix() {
+    //     let ark = make_ark_matrix();
+    //     println!("{:?}", ark);
+    // }
 
     #[test]
     fn test_poseidon_constraints() {
