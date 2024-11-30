@@ -3,6 +3,7 @@ pub mod poseidon_circuit;
 pub mod exchange_circuit;
 pub mod receive_circuit;
 pub mod register_circuit;
+pub mod sha256_circuit;
 
 pub mod import {
     pub use crate::gadget::{
