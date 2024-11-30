@@ -4,7 +4,8 @@ pragma solidity ^0.8.0;
 import "./crypto/utils/Bn128.sol";
 import "./crypto/utils/BaseMerkleTree.sol";
 import "./crypto/groth16/Groth16AltBN128.sol";
-import "./crypto/hash/MiMC7.sol";
+import "./crypto/hash/PoseidonLib.sol";
+import "./crypto/hash/ArkConstants.sol";
 import "hardhat/console.sol";
 
 contract CBDC is BaseMerkleTree {
@@ -29,8 +30,14 @@ contract CBDC is BaseMerkleTree {
     Bn128.G1Point public apk;
     Bn128.G1Point[] public ck;
 
+    uint256 public fullRounds;
+    uint256 public partialRounds;
+    uint256 public alpha;
+    uint256[3][3] public mds;
+    uint256[][] public ark;
+
     constructor(
-        uint256 depth,
+        uint256 _depth,
         uint256[] memory _register_vk,
         uint256[] memory _send_vk,
         uint256[] memory _receive_vk,
@@ -38,7 +45,7 @@ contract CBDC is BaseMerkleTree {
         uint256[] memory _apk,
         uint256[] memory _ck
     ) initializer {
-        __BaseMerkleTree_init(depth);
+        __BaseMerkleTree_init(_depth);
         register_vk = _register_vk;
         send_vk = _send_vk;
         receive_vk = _receive_vk;
@@ -46,13 +53,21 @@ contract CBDC is BaseMerkleTree {
         apk = Bn128.G1Point(_apk[0], _apk[1]);
         ck.push(Bn128.G1Point(_ck[0], _ck[1]));
         ck.push(Bn128.G1Point(_ck[2], _ck[3]));
+        fullRounds = ArkConstants.getFullRounds();
+        partialRounds = ArkConstants.getPartialRounds();
+        alpha = ArkConstants.getAlpha();
+        mds = ArkConstants.getMds();
+        ark = ArkConstants.getArk();
     }
 
     function _hash(
         bytes32 left,
         bytes32 right
-    ) internal pure override returns (bytes32) {
-        return MiMC7._hash(left, right);
+    ) internal view override returns (bytes32) {
+        uint256[2] memory inputs;
+        inputs[0] = uint256(left);
+        inputs[1] = uint256(right);
+        return bytes32(PoseidonLib._hashTwoToOne(inputs, mds, ark, alpha, fullRounds, partialRounds));
     }
 
     function _verify(
@@ -129,7 +144,7 @@ contract CBDC is BaseMerkleTree {
         return _get_num_leaves();
     }
 
-    function compute_tag(uint256[] memory ct) internal pure returns (uint256) {
+    function compute_tag(uint256[] memory ct) internal view returns (uint256) {
         bytes32 _tag = bytes32(ct[0]);
         for (uint256 i = 1; i < ct.length; i++) {
             _tag = _hash(_tag, bytes32(ct[i]));
