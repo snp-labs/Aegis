@@ -79,7 +79,7 @@ abstract contract BaseMerkleTree is Initializable {
         );
 
         // A hash of commitment is appended to merkle tree 
-        bytes32 hashed_commitment = _hash(commitment, commitment);
+        bytes32 hashed_commitment = _hash(commitment, 0);
 
         // Address of the next leaf is the current number of leaves (before
         // insertion).  Compute the next index in the full set of nodes, and
