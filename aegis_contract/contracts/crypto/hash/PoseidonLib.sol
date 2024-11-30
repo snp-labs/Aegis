@@ -179,6 +179,26 @@ library PoseidonLib {
         return chunks;
     }
 
+    function splitAndPadTwoToOne(uint256[2] memory input, uint256 rate) internal pure returns (uint256[][] memory) {
+        uint256 inputLength = input.length;
+        uint256 chunkCount = (inputLength + rate - 1) / rate;
+        uint256[][] memory chunks = new uint256[][](chunkCount);
+
+        for (uint256 i = 0; i < chunkCount; i++) {
+            chunks[i] = new uint256[](rate);
+            for (uint256 j = 0; j < rate; j++) {
+                uint256 index = i * rate + j;
+                if (index < inputLength) {
+                    chunks[i][j] = input[index];
+                } else {
+                    chunks[i][j] = 0;
+                }
+            }
+        }
+        
+        return chunks;
+    }
+
     function _hash(
         uint256[] memory inputs,
         uint256[3][3] memory mds,
@@ -191,6 +211,24 @@ library PoseidonLib {
 
         uint256[3] memory state;
         uint256[][] memory chunks = splitAndPad(inputs, 2); // Rate = 2
+
+        state = absorb(state, chunks, ark, mds, alpha, fullRounds, partialRounds);
+
+        return squeeze(state, ark, mds, alpha, fullRounds, partialRounds);
+    }
+
+     function _hashTwoToOne(
+        uint256[2] memory inputs,
+        uint256[3][3] memory mds,
+        uint256[][] memory ark,
+        uint256 alpha,
+        uint256 fullRounds,
+        uint256 partialRounds
+    ) public pure returns (uint256) {
+        require(inputs.length > 0, "Input cannot be empty");
+
+        uint256[3] memory state;
+        uint256[][] memory chunks = splitAndPadTwoToOne(inputs, 2);
 
         state = absorb(state, chunks, ark, mds, alpha, fullRounds, partialRounds);
 
