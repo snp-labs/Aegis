@@ -2,6 +2,23 @@
 pragma solidity ^0.8.0;
 
 library PoseidonLib {
+    /**
+     * Poseidon Hash Parameters:
+     * - rate: Number of elements processed per absorption step.
+     * - capacity: Security parameter defining unused state size.
+     * For this implementation:
+     * - rate = 2
+     * - capacity = 1
+     * - width = rate + capacity = 3
+     *
+     * Customizable Parameters(user define):
+     * - ark: AddRoundConstants used in each round.
+     * - mds: Maximally Distance Separating (MDS) matrix for state mixing.
+     * - alpha: Exponent used in the S-box for non-linear transformation.
+     * - fullRounds: Number of full S-box rounds applied to all state elements.
+     * - partialRounds: Number of partial S-box rounds applied to a single state element.
+     */
+
     uint256 constant p = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
     function applyARC(
