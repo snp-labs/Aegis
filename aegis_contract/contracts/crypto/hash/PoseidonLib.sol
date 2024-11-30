@@ -88,26 +88,19 @@ library PoseidonLib {
         uint256 alpha,
         uint256 fullRounds,
         uint256 partialRounds
-    ) internal pure returns (uint256[] memory) {
-        uint256 numOutputs = 1;
-        uint256[] memory outputs = new uint256[](numOutputs);
+    ) internal pure returns (uint256) {
         uint256 rateIndex = 0;
-        uint256 outputCount = 0;
 
-        while (outputCount < numOutputs) {
-            while (rateIndex < 2 && outputCount < numOutputs) {
-                outputs[outputCount] = state[1 + rateIndex];
-                rateIndex++;
-                outputCount++;
+        for (uint256 i = 0; i < 2; i++) {
+            if (rateIndex < 2) {
+                return state[1 + rateIndex];
             }
 
-            if (outputCount < numOutputs) {
-                state = permute(state, ark, mds, alpha, fullRounds, partialRounds);
-                rateIndex = 0;
-            }
+            state = permute(state, ark, mds, alpha, fullRounds, partialRounds);
+            rateIndex = 0;
         }
 
-        return outputs;
+        revert("Squeeze failed");
     }
 
     function applyFullRounds(
@@ -176,7 +169,7 @@ library PoseidonLib {
         uint256 alpha,
         uint256 fullRounds,
         uint256 partialRounds
-    ) public pure returns (uint256[] memory) {
+    ) public pure returns (uint256) {
         require(inputs.length > 0, "Input cannot be empty");
 
         uint256[3] memory state;
