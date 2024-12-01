@@ -318,30 +318,6 @@ where
             ct_bar.push(c.c);
         });
 
-        let data = vec![
-            cm.clone().to_string(),
-            ct_bar[0].clone().to_string(),
-            ct_bar[1].clone().to_string(),
-            ct_bar[2].clone().to_string(),
-            ct_bar[3].clone().to_string(),
-            ct_bar[4].clone().to_string(),
-            ct_bar[5].clone().to_string(),
-            ct_bar[6].clone().to_string(),
-            apk.clone().x().unwrap().clone().to_string(),
-            apk.clone().y().unwrap().clone().to_string(),
-            g_r.clone().x().unwrap().clone().to_string(),
-            g_r.clone().y().unwrap().clone().to_string(),
-            k_a.clone().x().unwrap().clone().to_string(),
-            k_a.clone().y().unwrap().clone().to_string(),
-        ];
-
-        let json_data =
-            serde_json::to_string(&data).expect("벡터를 JSON으로 변환하는 데 실패했습니다.");
-
-        // 파일에 저장
-        let mut file = File::create("../aegis_contract/result/register.input.json").expect("파일 생성에 실패했습니다.");
-        file.write_all(json_data.as_bytes())
-            .expect("파일에 JSON 데이터를 쓰는 데 실패했습니다.");
 
         let instance = RegisterInstance {
             cm: Some(cm),
