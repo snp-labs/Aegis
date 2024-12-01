@@ -142,7 +142,7 @@ mod receive_tests {
             serde_json::to_string(&data).expect("벡터를 JSON으로 변환하는 데 실패했습니다.");
 
         // 파일에 저장
-        let mut file = File::create(&format!("{}{}", path, "receive/receive.vk.json"))
+        let mut file = File::create(&format!("{}{}", path, "receive/receive.input.json"))
             .expect("파일 생성에 실패했습니다.");
         file.write_all(json_data.as_bytes())
             .expect("파일에 JSON 데이터를 쓰는 데 실패했습니다.");
