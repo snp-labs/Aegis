@@ -151,7 +151,7 @@ mod exchange_tests {
             .expect("벡터를 JSON으로 변환하는 데 실패했습니다.");
         
         // 파일에 저장
-        let mut file = File::create("../aegis_contract/result/exchange/exchange.input.json")
+        let mut file = File::create(&format!("{}{}", path, "exchange/exchange.input.json"))
             .expect("파일 생성에 실패했습니다.");
         file.write_all(json_data.as_bytes())
             .expect("파일에 JSON 데이터를 쓰는 데 실패했습니다.");
@@ -162,7 +162,7 @@ mod exchange_tests {
         let proof = Groth16::<Bn254>::prove(&pk, c.clone(), &mut rng).unwrap();
 
         let proof_for_smart_contract = MyProof(proof.clone());
-        save_json_to_file(&proof_for_smart_contract.to_string(), "../aegis_contract/result/exchange/exchange.proof.json");
+        save_json_to_file(&proof_for_smart_contract.to_string(), &format!("{}{}", path, "exchange/exchange.proof.json"));
         
         let verifier_timer = start_timer!(|| "Groth16:Verifier");
         assert!(Groth16::<Bn254>::verify_with_processed_vk(&pvk, &image, &proof).unwrap());
