@@ -19,6 +19,8 @@ pub mod import {
 
     pub use crate::cbdc::MockingCircuit;
     pub use crate::gadget::*;
+    pub use crate::utils::*;
+    pub use crate::gadget::hashes::poseidon::poseidon_params;
 
     pub type C = ark_ed_on_bn254::EdwardsProjective;
     pub type GG = ark_ed_on_bn254::constraints::EdwardsVar;
