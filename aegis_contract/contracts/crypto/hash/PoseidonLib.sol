@@ -17,13 +17,13 @@ library PoseidonLib {
      * - alpha: Exponent used in the S-box for non-linear transformation.
      * - fullRounds: Number of full S-box rounds applied to all state elements.
      * - partialRounds: Number of partial S-box rounds applied to a single state element.
-     */
+    */
 
     uint256 constant p = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
     function applyARC(
         uint256[3] memory state,
-        uint256[] memory roundConstants
+        uint256[3] memory roundConstants
     ) internal pure returns (uint256[3] memory) {
         for (uint256 i = 0; i < 3; i++) {
             state[i] = addmod(state[i], roundConstants[i], p);
@@ -52,7 +52,6 @@ library PoseidonLib {
     ) internal pure returns (uint256[3] memory) {
         uint256[3] memory newState;
         for (uint256 i = 0; i < 3; i++) {
-            newState[i] = 0;
             for (uint256 j = 0; j < 3; j++) {
                 newState[i] = addmod(newState[i], mulmod(state[j], mds[i][j], p), p);
             }
@@ -62,7 +61,7 @@ library PoseidonLib {
 
     function permute(
         uint256[3] memory state,
-        uint256[][] memory ark,
+        uint256[3][] memory ark,
         uint256[3][3] memory mds,
         uint256 alpha,
         uint256 fullRounds,
@@ -83,7 +82,7 @@ library PoseidonLib {
     function absorb(
         uint256[3] memory state,
         uint256[][] memory chunks,
-        uint256[][] memory ark,
+        uint256[3][] memory ark,
         uint256[3][3] memory mds,
         uint256 alpha,
         uint256 fullRounds,
@@ -100,7 +99,7 @@ library PoseidonLib {
 
     function squeeze(
         uint256[3] memory state,
-        uint256[][] memory ark,
+        uint256[3][] memory ark,
         uint256[3][3] memory mds,
         uint256 alpha,
         uint256 fullRounds,
@@ -122,7 +121,7 @@ library PoseidonLib {
 
     function applyFullRounds(
         uint256[3] memory state,
-        uint256[][] memory ark,
+        uint256[3][] memory ark,
         uint256[3][3] memory mds,
         uint256 alpha,
         uint256 startRound,
@@ -138,7 +137,7 @@ library PoseidonLib {
 
     function applyPartialRounds(
         uint256[3] memory state,
-        uint256[][] memory ark,
+        uint256[3][] memory ark,
         uint256[3][3] memory mds,
         uint256 alpha,
         uint256 startRound,
@@ -202,7 +201,7 @@ library PoseidonLib {
     function _hash(
         uint256[] memory inputs,
         uint256[3][3] memory mds,
-        uint256[][] memory ark,
+        uint256[3][] memory ark,
         uint256 alpha,
         uint256 fullRounds,
         uint256 partialRounds
@@ -210,17 +209,17 @@ library PoseidonLib {
         require(inputs.length > 0, "Input cannot be empty");
 
         uint256[3] memory state;
-        uint256[][] memory chunks = splitAndPad(inputs, 2); // Rate = 2
+        uint256[][] memory chunks = splitAndPad(inputs, 2);
 
         state = absorb(state, chunks, ark, mds, alpha, fullRounds, partialRounds);
 
         return squeeze(state, ark, mds, alpha, fullRounds, partialRounds);
     }
 
-     function _hashTwoToOne(
+    function _hashTwoToOne(
         uint256[2] memory inputs,
         uint256[3][3] memory mds,
-        uint256[][] memory ark,
+        uint256[3][] memory ark,
         uint256 alpha,
         uint256 fullRounds,
         uint256 partialRounds
