@@ -520,6 +520,9 @@ where
             .get_test_root(&leaf_crh_params, &two_to_one_params, [leaf])
             .unwrap();
 
+        println!("cm_cur: {:?}", cm_cur.to_string());
+        println!("rt: {:?}", rt.to_string());
+
         let i = 0;
         assert!(merkle_proof
             .verify(&leaf_crh_params, &two_to_one_params, &rt, [leaf])
@@ -558,39 +561,6 @@ where
             ct_bar.push(c.c);
         });
 
-        let mut data = vec![
-            rt.clone().to_string(),
-            ck[0].clone().x().unwrap().clone().to_string(),
-            ck[0].clone().y().unwrap().clone().to_string(),
-            ck[1].clone().x().unwrap().clone().to_string(),
-            ck[1].clone().y().unwrap().clone().to_string(),
-            addr_d.clone().to_string(),
-            sn_cur.clone().to_string(),
-            cm_new.clone().to_string(),
-            cm_new_d.clone().x().unwrap().clone().to_string(),
-            cm_new_d.clone().y().unwrap().clone().to_string(),
-            cm_v_d.clone().x().unwrap().clone().to_string(),
-            cm_v_d.clone().y().unwrap().clone().to_string(),
-        ];
-        data.extend(ct_bar.clone().iter().map(|c| c.to_string()));
-        data.extend(vec![
-            apk.clone().x().unwrap().clone().to_string(),
-            apk.clone().y().unwrap().clone().to_string(),
-            g_r.clone().x().unwrap().clone().to_string(),
-            g_r.clone().y().unwrap().clone().to_string(),
-            k_a.clone().x().unwrap().clone().to_string(),
-            k_a.clone().y().unwrap().clone().to_string(),
-        ]);
-
-        let json_data =
-        serde_json::to_string(&data).expect("벡터를 JSON으로 변환하는 데 실패했습니다.");
-
-        // 파일에 저장
-        let mut file =
-            File::create("../aegis_contract/result/exchange.input.json").expect("파일 생성에 실패했습니다.");
-            
-        file.write_all(json_data.as_bytes())
-            .expect("파일에 JSON 데이터를 쓰는 데 실패했습니다.");
 
         let instance = ExchangeInstance {
             rt: Some(rt),

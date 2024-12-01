@@ -480,6 +480,9 @@ where
             .verify(&leaf_crh_params, &two_to_one_params, &rt, [leaf])
             .unwrap());
 
+        println!("cm_cur: {:?}", cm_cur.to_string());
+        println!("rt: {:?}", rt.to_string());
+
         // encryption symmetric key
         let random = elgamal::Randomness { 0: r };
         let (_, _) = ElGamal::encrypt(&elgamal_param, &pk_snd, &k, &random).unwrap();
@@ -556,15 +559,7 @@ where
             K_a_auth.clone().y().unwrap().clone().to_string(),
         ]);
         data.extend(ct.clone().iter().map(|c| c.to_string())); // 11
-        let json_data =
-            serde_json::to_string(&data).expect("벡터를 JSON으로 변환하는 데 실패했습니다.");
 
-        // 파일에 저장
-        let mut file =
-            File::create("../aegis_contract/result/send.input.json").expect("파일 생성에 실패했습니다.");
-            
-        file.write_all(json_data.as_bytes())
-            .expect("파일에 JSON 데이터를 쓰는 데 실패했습니다.");
 
         let instance = SendInstance {
             sn_cur: Some(sn_cur),
