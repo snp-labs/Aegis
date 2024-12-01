@@ -110,7 +110,7 @@ mod register_tests {
         let vk_for_smart_contract = MyVerifyingKey(vk.clone());
         save_json_to_file(
             &vk_for_smart_contract.to_string(),
-            &format!("{}{}", path, "register.vk.json"),
+            &format!("{}{}", path, "register/register.vk.json"),
         );
 
         println!("Prepared verifying key!");
@@ -143,7 +143,7 @@ mod register_tests {
             .expect("벡터를 JSON으로 변환하는 데 실패했습니다.");
         
         // 파일에 저장
-        let mut file = File::create(&format!("{}{}", path, "register.input.json"))
+        let mut file = File::create(&format!("{}{}", path, "register/register.input.json"))
             .expect("파일 생성에 실패했습니다.");
         file.write_all(json_data.as_bytes())
             .expect("파일에 JSON 데이터를 쓰는 데 실패했습니다.");
@@ -158,7 +158,7 @@ mod register_tests {
         // let result = process_json(&my_struct.to_string());
         save_json_to_file(
             &proof_for_smart_contract.to_string(),
-            &format!("{}{}", path, "register.proof.json"),
+            &format!("{}{}", path, "register/register.proof.json"),
         );
 
         let verifier_timer = start_timer!(|| "Groth16:Verifier");
