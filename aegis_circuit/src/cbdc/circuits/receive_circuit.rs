@@ -15,6 +15,7 @@ where
     pub G_r: Option<C::Affine>, // CT
     pub K_u: Option<C::Affine>, // CT
     pub K_a: Option<C::Affine>, // CT
+    pub CT: Option<Vec<C::BaseField>>,
     _curve_var: PhantomData<GG>,
 }
 
@@ -39,7 +40,6 @@ where
     pub cm_cur: Option<C::BaseField>,
     pub leaf_pos: Option<u32>,
     pub path: Option<merkle_tree::Path<MerkleTreeParams<C::BaseField>>>, // tree_proof
-    pub CT: Option<Vec<C::BaseField>>,
     pub r: Option<elgamal::Randomness<C>>, // CT
     pub k: Option<elgamal::Plaintext<C>>,  // CT
     pub k_point_x: Option<symmetric::SymmetricKey<C::BaseField>>, // CT
@@ -282,7 +282,7 @@ where
 
         // CT
         let CT: Vec<FpVar<C::BaseField>> = Vec::new_input(ark_relations::ns!(cs, "CT"), || {
-            self.witness.CT.ok_or(SynthesisError::AssignmentMissing)
+            self.instance.CT.ok_or(SynthesisError::AssignmentMissing)
         })?;
 
         let CT = vec![
@@ -545,9 +545,7 @@ where
 
         println!("root: {:?}", rt.to_string());
         println!("cm_v: {:?}", cm_v.to_string());
-        println!("cm_new: {:?}", cm_cur.to_string());
-        println!("sn_cur: {:?}", sn_cur.to_string());
-        println!("sn_v: {:?}", sn_v.to_string());
+        println!("cm_cur: {:?}", cm_cur.to_string());
 
         // let mut data = vec![
         //     apk.clone(),
@@ -594,6 +592,7 @@ where
             G_r: Some(G_r),
             K_u: Some(K_u),
             K_a: Some(K_a),
+            CT: Some(CT),
             _curve_var: PhantomData,
         };
 
@@ -612,7 +611,6 @@ where
             cm_cur: Some(cm_cur),
             leaf_pos: Some(i),
             path: Some(path),
-            CT: Some(CT),
             r: Some(random),                      // CT
             k: Some(k),                           // CT
             k_point_x: Some(k_point_x),           // CT
