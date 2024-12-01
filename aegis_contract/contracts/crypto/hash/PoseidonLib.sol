@@ -98,25 +98,9 @@ library PoseidonLib {
     }
 
     function squeeze(
-        uint256[3] memory state,
-        uint256[3][] memory ark,
-        uint256[3][3] memory mds,
-        uint256 alpha,
-        uint256 fullRounds,
-        uint256 partialRounds
+        uint256[3] memory state
     ) internal pure returns (uint256) {
-        uint256 rateIndex = 0;
-
-        for (uint256 i = 0; i < 2; i++) {
-            if (rateIndex < 2) {
-                return state[1 + rateIndex];
-            }
-
-            state = permute(state, ark, mds, alpha, fullRounds, partialRounds);
-            rateIndex = 0;
-        }
-
-        revert("Squeeze failed");
+        return state[1];
     }
 
     function applyFullRounds(
@@ -213,7 +197,7 @@ library PoseidonLib {
 
         state = absorb(state, chunks, ark, mds, alpha, fullRounds, partialRounds);
 
-        return squeeze(state, ark, mds, alpha, fullRounds, partialRounds);
+        return squeeze(state);
     }
 
     function _hashTwoToOne(
@@ -231,6 +215,6 @@ library PoseidonLib {
 
         state = absorb(state, chunks, ark, mds, alpha, fullRounds, partialRounds);
 
-        return squeeze(state, ark, mds, alpha, fullRounds, partialRounds);
+        return squeeze(state);
     }
 }
