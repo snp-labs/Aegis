@@ -547,41 +547,6 @@ where
         println!("cm_v: {:?}", cm_v.to_string());
         println!("cm_cur: {:?}", cm_cur.to_string());
 
-        // let mut data = vec![
-        //     apk.clone(),
-        //     sn_v.clone(),
-        //     sn_cur.clone(),
-        //     cm_new.clone(),
-        //     rt.clone(),
-        //     G_r.clone(),
-        //     K_u.clone(),
-        //     K_a.clone(),
-        // ];
-
-        let data = vec![
-            apk.clone().x().unwrap().clone().to_string(),
-            apk.clone().y().unwrap().clone().to_string(),
-            sn_v.clone().to_string(),
-            sn_cur.clone().to_string(),
-            cm_new.clone().to_string(),
-            rt.clone().to_string(),
-            G_r.clone().x().unwrap().clone().to_string(),
-            G_r.clone().y().unwrap().clone().to_string(),
-            K_u.clone().x().unwrap().clone().to_string(),
-            K_u.clone().y().unwrap().clone().to_string(),
-            K_a.clone().x().unwrap().clone().to_string(),
-            K_a.clone().y().unwrap().clone().to_string(),
-        ];
-
-        // 파일에 저장
-        let json_data =
-            serde_json::to_string(&data).expect("벡터를 JSON으로 변환하는 데 실패했습니다.");
-
-        let mut file =
-            File::create("../aegis_contract/result/receive.input.json").expect("파일 생성에 실패했습니다.");
-            
-        file.write_all(json_data.as_bytes())
-            .expect("파일에 JSON 데이터를 쓰는 데 실패했습니다.");
 
         let instance = ReceiveInstance {
             apk: Some(apk),
