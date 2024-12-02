@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "./crypto/utils/BaseMerkleTree.sol";
-import "./crypto/hash/PoseidonLib.sol";
+import "./crypto/hash/PoseidonAsmLib.sol";
 import "./crypto/hash/ArkConstants.sol";
 
-contract PoseidonMerkleTree is BaseMerkleTree {
+contract PoseidonMerkleTreeAsm is BaseMerkleTree {
     uint256 public fullRounds;
     uint256 public partialRounds;
     uint256 public alpha;
@@ -28,7 +28,7 @@ contract PoseidonMerkleTree is BaseMerkleTree {
         uint256[2] memory inputs;
         inputs[0] = uint256(left);
         inputs[1] = uint256(right);
-        return bytes32(PoseidonLib._hashTwoToOne(inputs, mds, ark, alpha, fullRounds, partialRounds));
+        return bytes32(PoseidonAsmLib._hashTwoToOne(inputs, mds, ark, alpha, fullRounds, partialRounds));
     }
 
     function insert_cm(uint256 cm) public returns (uint256) {
