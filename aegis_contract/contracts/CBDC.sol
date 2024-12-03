@@ -34,7 +34,7 @@ contract CBDC is BaseMerkleTree {
     uint256 public partialRounds;
     uint256 public alpha;
     uint256[3][3] public mds;
-    uint256[][] public ark;
+    uint256[3][] public ark;
 
     constructor(
         uint256 _depth,
