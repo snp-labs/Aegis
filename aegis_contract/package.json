@@ -2,7 +2,10 @@
   "name": "hardhat-project",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.16"
+    "@nomiclabs/hardhat-web3": "^2.0.1",
+    "@types/jest": "^29.5.14",
+    "hardhat": "^2.22.16",
+    "web3": "^1.10.4"
   },
   "dependencies": {
     "@openzeppelin/contracts-upgradeable": "^5.1.0"
