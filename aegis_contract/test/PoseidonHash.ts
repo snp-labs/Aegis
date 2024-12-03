@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { PoseidonHasher, PoseidonHasher__factory, PoseidonLib__factory, PoseidonAsmLib__factory } from "../typechain-types";
+import { PoseidonHasher, PoseidonHasher__factory, PoseidonHashLib__factory } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 
@@ -11,15 +11,11 @@ describe("Poseidon Hasher", () => {
     beforeEach(async() => {
         [signer] = await ethers.getSigners();
 
-        const poseidonLib = await new PoseidonLib__factory(signer).deploy();
-        const poseidonLibAddress = await poseidonLib.getAddress();
-
-        const poseidonAsmLib = await new PoseidonAsmLib__factory(signer).deploy();
-        const poseidonAsmLibAddress = await poseidonAsmLib.getAddress();
+        const poseidonHashLib = await new PoseidonHashLib__factory(signer).deploy();
+        const poseidonHashLibAddress = await poseidonHashLib.getAddress();
 
         const libraryAddresses = {
-            "contracts/crypto/hash/PoseidonLib.sol:PoseidonLib": poseidonLibAddress,
-            "contracts/crypto/hash/PoseidonAsmLib.sol:PoseidonAsmLib": poseidonAsmLibAddress,
+            "contracts/crypto/hash/PoseidonHashLib.sol:PoseidonHashLib": poseidonHashLibAddress
         };
 
         poseidonHasher = await new PoseidonHasher__factory(libraryAddresses, signer).deploy();
@@ -29,31 +25,31 @@ describe("Poseidon Hasher", () => {
         expect(await poseidonHasher.getAddress()).to.be.properAddress;
     });
 
-    it("should return the correct hash [PoseidonAsmLib]", async() => {
+    it("should return the correct hash [PoseidonHashLib]", async() => {
         const input = ethers.toBigInt("7524178265202101577084604334552339139954807715757712981859874388306919542679");
-        const digest = await poseidonHasher.hashAsm([input]);
-        await digest.wait();
-    });
-
-    it("should return the correct hash [PoseidonLib]", async() => {
-        const input = ethers.toBigInt("7524178265202101577084604334552339139954807715757712981859874388306919542679");
-        const digest= await poseidonHasher.hash([input]);
-        await digest.wait();
+        const digest = await poseidonHasher.hashPoseidon([input]);
+        console.log(digest);
     });
 
     it("should return the correct hash [Keccack]", async() => {
         const input = ethers.toBigInt("7524178265202101577084604334552339139954807715757712981859874388306919542679");
         const digest= await poseidonHasher.hashKeccak([input]);
-        await digest.wait();
+        console.log(digest);
     });
 
     it("should return the correct hash [MiMC7]", async() => {
         const input = ethers.toBigInt("7524178265202101577084604334552339139954807715757712981859874388306919542679");
         const digest= await poseidonHasher.hashMiMC7([input]);
-        await digest.wait();
+        console.log(digest);
     });
 
-    // it("should compare gas costs between PoseidonLib and PoseidonAsmLib", async() => {
-    //     const input = ethers.toBigInt("7524178265202101577084604334552339139954807715757712981859874388306919542679");
-    // });
+    it("should measure gas cost : [PoseidonLib]", async() => {
+        const input = ethers.toBigInt("11235");
+        const PoseidonHashLibGasCost = await poseidonHasher.hashPoseidon.estimateGas([input]);
+        const MiMC7GasCost = await poseidonHasher.hashMiMC7.estimateGas([input]);
+        const KeccakGasCost = await poseidonHasher.hashKeccak.estimateGas([input]);
+        console.log("[MiMC7]: ", MiMC7GasCost.toString());
+        console.log("[Keccak]: ", KeccakGasCost.toString());
+        console.log("[Poseidon]: ", PoseidonHashLibGasCost.toString());
+    });
 });
