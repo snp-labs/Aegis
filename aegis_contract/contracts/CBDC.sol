@@ -51,7 +51,7 @@ contract CBDC is BaseMerkleTree {
     function _hash(
         bytes32 left,
         bytes32 right
-    ) internal view override returns (bytes32) {
+    ) internal pure override returns (bytes32) {
         uint256[2] memory inputs;
         inputs[0] = uint256(left);
         inputs[1] = uint256(right);
@@ -301,5 +301,9 @@ contract CBDC is BaseMerkleTree {
 
     function get_cm_d(uint256 addr_d) public view returns (uint256, uint256) {
         return (list_cm_d[addr_d].X, list_cm_d[addr_d].Y);
+    }
+
+    function hash(uint256 x, uint256 y) public pure returns (uint256) {
+        return PoseidonHashLib._hash(x, y);
     }
 }
