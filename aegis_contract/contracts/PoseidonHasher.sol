@@ -1,25 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./crypto/hash/PoseidonLib.sol";
-import "./crypto/hash/ArkConstants.sol";
+import "./crypto/hash/PoseidonHashLib.sol";
+import "./crypto/hash/MiMC7.sol";
 
 contract PoseidonHasher {
-    uint256 public fullRounds;
-    uint256 public partialRounds;
-    uint256 public alpha;
-    uint256[3][3] public mds;
-    uint256[][] public ark;
-
-    constructor() {
-        fullRounds = ArkConstants.getFullRounds();
-        partialRounds = ArkConstants.getPartialRounds();
-        alpha = ArkConstants.getAlpha();
-        mds = ArkConstants.getMds();
-        ark = ArkConstants.getArk();
+    function hashPoseidonTwoToOne(uint256 x, uint256 y) public pure returns (uint256) {
+        return PoseidonHashLib._hash(x, y);
     }
 
-    function hash(uint256[] memory inputs) public view returns (uint256) {
-        return PoseidonLib._hash(inputs, mds, ark, alpha, fullRounds, partialRounds);
+    function hashPoseidonSingle(uint256 x) public pure returns (uint256) {
+        return PoseidonHashLib._hash(x, 0);
+    }
+
+    function hashKeccak(uint256 x, uint256 y) public pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(x, y)));
+    }
+
+    function hashMiMC7(uint256 x, uint256 y) public pure returns (uint256) {
+        return uint256(MiMC7._hash(bytes32(x), bytes32(y)));
     }
 }

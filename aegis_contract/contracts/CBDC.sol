@@ -4,8 +4,7 @@ pragma solidity ^0.8.0;
 import "./crypto/utils/Bn128.sol";
 import "./crypto/utils/BaseMerkleTree.sol";
 import "./crypto/groth16/Groth16AltBN128.sol";
-import "./crypto/hash/PoseidonLib.sol";
-import "./crypto/hash/ArkConstants.sol";
+import "./crypto/hash/PoseidonHashLib.sol";
 import "hardhat/console.sol";
 
 contract CBDC is BaseMerkleTree {
@@ -30,12 +29,6 @@ contract CBDC is BaseMerkleTree {
     Bn128.G1Point public apk;
     Bn128.G1Point[] public ck;
 
-    uint256 public fullRounds;
-    uint256 public partialRounds;
-    uint256 public alpha;
-    uint256[3][3] public mds;
-    uint256[][] public ark;
-
     constructor(
         uint256 _depth,
         uint256[] memory _register_vk,
@@ -53,11 +46,6 @@ contract CBDC is BaseMerkleTree {
         apk = Bn128.G1Point(_apk[0], _apk[1]);
         ck.push(Bn128.G1Point(_ck[0], _ck[1]));
         ck.push(Bn128.G1Point(_ck[2], _ck[3]));
-        fullRounds = ArkConstants.getFullRounds();
-        partialRounds = ArkConstants.getPartialRounds();
-        alpha = ArkConstants.getAlpha();
-        mds = ArkConstants.getMds();
-        ark = ArkConstants.getArk();
     }
 
     function _hash(
@@ -67,7 +55,7 @@ contract CBDC is BaseMerkleTree {
         uint256[2] memory inputs;
         inputs[0] = uint256(left);
         inputs[1] = uint256(right);
-        return bytes32(PoseidonLib._hashTwoToOne(inputs, mds, ark, alpha, fullRounds, partialRounds));
+        return bytes32(PoseidonHashLib._hash(uint256(left), uint256(right)));
     }
 
     function _verify(
