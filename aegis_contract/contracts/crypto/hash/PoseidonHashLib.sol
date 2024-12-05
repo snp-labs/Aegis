@@ -91,22 +91,22 @@ library PoseidonHashLib {
                         let temp
 
                         temp := addmod(
-                            addmod(mulmod(s0, MDS00, p), mulmod(s1, MDS01, p), p),
-                            mulmod(s2, MDS02, p),
+                            addmod(mul(s0, MDS00), mul(s1, MDS01), p),
+                            mul(s2, MDS02),
                             p
                         )
                         mstore(state, temp)
 
                         temp := addmod(
-                            addmod(mulmod(s0, MDS10, p), mulmod(s1, MDS11, p), p),
-                            mulmod(s2, MDS12, p),
+                            addmod(mul(s0, MDS10), mul(s1, MDS11), p),
+                            mul(s2, MDS12),
                             p
                         )
                         mstore(add(state, 0x20), temp)
 
                         temp := addmod(
-                            addmod(mulmod(s0, MDS20, p), mulmod(s1, MDS21, p), p),
-                            mulmod(s2, MDS22, p),
+                            addmod(mul(s0, MDS20), mul(s1, MDS21), p),
+                            mul(s2, MDS22),
                             p
                         )
                         mstore(add(state, 0x40), temp)
@@ -153,22 +153,22 @@ library PoseidonHashLib {
                         let temp
 
                         temp := addmod(
-                            addmod(mulmod(s0, MDS00, p), mulmod(s1, MDS01, p), p),
-                            mulmod(s2, MDS02, p),
+                            addmod(mul(s0, MDS00), mul(s1, MDS01), p),
+                            mul(s2, MDS02),
                             p
                         )
                         mstore(state, temp)
 
                         temp := addmod(
-                            addmod(mulmod(s0, MDS10, p), mulmod(s1, MDS11, p), p),
-                            mulmod(s2, MDS12, p),
+                            addmod(mul(s0, MDS10), mul(s1, MDS11), p),
+                            mul(s2, MDS12),
                             p
                         )
                         mstore(add(state, 0x20), temp)
 
                         temp := addmod(
-                            addmod(mulmod(s0, MDS20, p), mulmod(s1, MDS21, p), p),
-                            mulmod(s2, MDS22, p),
+                            addmod(mul(s0, MDS20), mul(s1, MDS21), p),
+                            mul(s2, MDS22),
                             p
                         )
                         mstore(add(state, 0x40), temp)
@@ -225,22 +225,22 @@ library PoseidonHashLib {
                         let temp
 
                         temp := addmod(
-                            addmod(mulmod(s0, MDS00, p), mulmod(s1, MDS01, p), p),
-                            mulmod(s2, MDS02, p),
+                            addmod(mul(s0, MDS00), mul(s1, MDS01), p),
+                            mul(s2, MDS02),
                             p
                         )
                         mstore(state, temp)
 
                         temp := addmod(
-                            addmod(mulmod(s0, MDS10, p), mulmod(s1, MDS11, p), p),
-                            mulmod(s2, MDS12, p),
+                            addmod(mul(s0, MDS10), mul(s1, MDS11), p),
+                            mul(s2, MDS12),
                             p
                         )
                         mstore(add(state, 0x20), temp)
 
                         temp := addmod(
-                            addmod(mulmod(s0, MDS20, p), mulmod(s1, MDS21, p), p),
-                            mulmod(s2, MDS22, p),
+                            addmod(mul(s0, MDS20), mul(s1, MDS21), p),
+                            mul(s2, MDS22),
                             p
                         )
                         mstore(add(state, 0x40), temp)
