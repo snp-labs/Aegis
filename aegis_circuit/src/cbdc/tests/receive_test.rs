@@ -19,7 +19,7 @@ mod receive_tests {
         use ark_relations::r1cs::ConstraintSynthesizer;
 
         let test_input =
-            <ReceiveCircuit<C, GG> as MockingCircuit<C, GG>>::generate_circuit(33)
+            <ReceiveCircuit<C, GG> as MockingCircuit<C, GG>>::generate_circuit(TREE_HEIGHT)
                 .unwrap();
 
         let cs = ark_relations::r1cs::ConstraintSystem::new_ref();
