@@ -79,48 +79,17 @@ describe("register", () => {
     );
   });
 
-  it.only("register-gas consumption", async () => {
+  it("register-gas consumption", async () => {
     const input = preprocessedInput(REGISTER_INPUT);
     const instance = preprocessedRegisterInstance(input);
     const proof = preprocessedProof(REGISTER_PROOF);
 
     await CBDC.insert_cm(instance.cm);
-
-    await CBDC.register(instance.cm, instance.ct_bar, instance.ct_key, proof);
-  });
-
-  it("register-tps", async () => {
-    const input = preprocessedInput(REGISTER_INPUT);
-    const instance = preprocessedRegisterInstance(input);
-    const proof = preprocessedProof(REGISTER_PROOF);
-
-    await CBDC.insert_cm(instance.cm);
-
-    await CBDC.register(instance.cm, instance.ct_bar, instance.ct_key, proof);
-
-    const numTransactions = 100;
-    const txPromises = [];
+    
     const startTime = Date.now();
-
-    for (let i = 0; i < numTransactions; i++) {
-      txPromises.push(
-        CBDC.register(instance.cm, instance.ct_bar, instance.ct_key, proof)
-      );
-    }
-
-    // 모든 트랜잭션이 처리될 때까지 대기
-    await Promise.all(txPromises);
-
+    await CBDC.register(instance.cm, instance.ct_bar, instance.ct_key, proof);
     const endTime = Date.now();
-    const durationInSeconds = (endTime - startTime) / 1000;
-    const tps = numTransactions / durationInSeconds;
-    const oneTransactionTime = durationInSeconds / numTransactions;
-
-    console.log(
-      `총 ${numTransactions}개의 트랜잭션을 ${durationInSeconds}초에 전송했습니다.`
-    );
-    console.log(`TPS: ${tps}`);
-    console.log(`한 트랜잭션당 소요 시간: ${oneTransactionTime}초`);
+    console.log("[Register] Execution time:", endTime - startTime, "ms");
   });
 });
 
@@ -157,7 +126,7 @@ describe("send", () => {
     );
   });
 
-  it.only("send-gas consumption", async () => {
+  it("send-gas consumption", async () => {
     const input = preprocessedInput(SEND_INPUT);
     const instance = preprocessedSendInstance(input);
     const proof = preprocessedProof(SEND_PROOF);
@@ -172,80 +141,149 @@ describe("send", () => {
     await CBDC.insert_sn(instance.sn_cur);
     await CBDC.insert_cm(instance.cm_v);
 
-    console.log("ct_bar.length: ", instance.ct_bar.length);
-    await CBDC.send(
-      instance.rt,
-      instance.sn_cur,
-      instance.cm_new,
-      instance.cm_v,
-      instance.ct_bar,
-      instance.ct_key,
-      instance.ct,
-      instance.auth,
-      proof
-    );
-  });
-
-  it("send-tps", async () => {
-    const input = preprocessedInput(SEND_INPUT);
-    const instance = preprocessedSendInstance(input);
-    const proof = preprocessedProof(SEND_PROOF);
-
-    // this cm used in register step.
-    // make rt for send.
-    await CBDC.insert_cm(
-      "8014028253815006770497752673435832929565893020002757511111383677682508243356"
-    );
-    await CBDC.insert_rt(instance.rt);
-    await CBDC.insert_sn(instance.sn_cur);
-    await CBDC.insert_cm(instance.cm_v);
-
-    await CBDC.send(
-      instance.rt,
-      instance.sn_cur,
-      instance.cm_new,
-      instance.cm_v,
-      instance.ct_bar,
-      instance.ct_key,
-      instance.ct,
-      instance.auth,
-      proof
-    );
-
-    const numTransactions = 100;
-    const txPromises = [];
     const startTime = Date.now();
-
-    for (let i = 0; i < numTransactions; i++) {
-      txPromises.push(
-        CBDC.send(
-          instance.rt,
-          instance.sn_cur,
-          instance.cm_new,
-          instance.cm_v,
-          instance.ct_bar,
-          instance.ct_key,
-          instance.ct,
-          instance.auth,
-          proof
-        )
-      );
-    }
-
-    // 모든 트랜잭션이 처리될 때까지 대기
-    await Promise.all(txPromises);
-
-    const endTime = Date.now();
-    const durationInSeconds = (endTime - startTime) / 1000;
-    const tps = numTransactions / durationInSeconds;
-    const oneTransactionTime = durationInSeconds / numTransactions;
-
-    console.log(
-      `총 ${numTransactions}개의 트랜잭션을 ${durationInSeconds}초에 전송했습니다.`
+    await CBDC.send(
+      instance.rt,
+      instance.sn_cur,
+      instance.cm_new,
+      instance.cm_v,
+      instance.ct_bar,
+      instance.ct_key,
+      instance.ct,
+      instance.auth,
+      proof
     );
-    console.log(`TPS: ${tps}`);
-    console.log(`한 트랜잭션당 소요 시간: ${oneTransactionTime}초`);
+    const endTime = Date.now();
+    console.log("[Send] Execution time:", endTime - startTime, "ms");
   });
 });
 
 
+describe("receive", () => {
+  let CBDC: CBDC;
+  let signer: SignerWithAddress;
+
+  beforeEach(async () => {
+    [signer] = await ethers.getSigners();
+    const poseidonHashLib = await new PoseidonHashLib__factory(signer).deploy();
+    const poseidonHashLibAddr = await poseidonHashLib.getAddress();
+
+    const libraryAddresses = {
+        "contracts/crypto/hash/PoseidonHashLib.sol:PoseidonHashLib": poseidonHashLibAddr,
+    };
+
+    const vk = preprocessedVK(RECEIVE_VK);
+    const input = preprocessedInput(RECEIVE_INPUT);
+    const instance = preprocessedReceiveInstance(input);
+
+    const mockVk = [1];
+    const apk = instance.apk;
+    const MT_DEPTH = 31;
+    const mockCK = [1, 1, 1, 1];
+
+    CBDC = await new CBDC__factory(libraryAddresses, signer).deploy(
+      MT_DEPTH,
+      mockVk,
+      mockVk,
+      vk,
+      mockVk,
+      apk,
+      mockCK
+    );
+  });
+
+  it("receive-gas consumption", async () => {
+    const input = preprocessedInput(RECEIVE_INPUT);
+    const instance = preprocessedReceiveInstance(input);
+    const proof = preprocessedProof(RECEIVE_PROOF);
+
+    await CBDC.insert_two_element(
+      "16162629506693925027798233622706919065647496598554375377130816968730781634566",
+      "19754860774445696082831547942186449042970925069334241888307803281142883616633"
+    );
+    await CBDC.insert_rt(instance.rt);
+    await CBDC.insert_sn(instance.sn_v);
+    await CBDC.insert_sn(instance.sn_cur);
+    await CBDC.insert_cm(instance.cm_new);
+
+    const startTime = Date.now();
+    await CBDC.receive(
+      instance.sn_v,
+      instance.sn_cur,
+      instance.cm_new,
+      instance.rt,
+      instance.ct_key,
+      instance.ct,
+      proof
+    );
+    const endTime = Date.now();
+    console.log("[Receive] Execution time:", endTime - startTime, "ms");
+  });
+});
+
+
+describe("exchange", () => {
+  let CBDC: CBDC;
+  let signer: SignerWithAddress;
+
+  beforeEach(async () => {
+    [signer] = await ethers.getSigners();
+    const poseidonHashLib = await new PoseidonHashLib__factory(signer).deploy();
+    const poseidonHashLibAddr = await poseidonHashLib.getAddress();
+
+    const libraryAddresses = {
+        "contracts/crypto/hash/PoseidonHashLib.sol:PoseidonHashLib": poseidonHashLibAddr,
+    };
+
+    const vk = preprocessedVK(EXCHANGE_VK);
+    const exchange_input = preprocessedInput(EXCHANGE_INPUT);
+    const exchange_instance = preprocessedExchangeInstance(exchange_input);
+    const mockVk = [1];
+    const apk = exchange_instance.apk;
+    const ck = exchange_instance.ck;
+    const MT_DEPTH = 31;
+
+    CBDC = await new CBDC__factory(libraryAddresses, signer).deploy(
+      MT_DEPTH,
+      mockVk,
+      mockVk,
+      mockVk,
+      vk,
+      apk,
+      ck
+    );
+  });
+
+  it("exchange-gas consumption", async () => {
+    const exchange_input = preprocessedInput(EXCHANGE_INPUT);
+    const exchange_instance = preprocessedExchangeInstance(exchange_input);
+
+    const proof = preprocessedProof(EXCHANGE_PROOF);
+    const addr_d = exchange_instance.addr_d;
+
+    await CBDC.register_addr_d(addr_d, [
+      "13625107635562226780748047873302316074995727226145894150643945342841230032499",
+      "11449127362176692264979541020041522177404679311286906351407764389475552064184",
+    ]);
+    await CBDC.insert_rt(exchange_instance.rt);
+    await CBDC.insert_sn(exchange_instance.sn_cur);
+    await CBDC.insert_cm(exchange_instance.cm_new);
+
+    const startTime = Date.now();
+    await CBDC.exchange(
+      exchange_instance.rt,
+      exchange_instance.addr_d,
+      exchange_instance.sn_cur,
+      exchange_instance.cm_new,
+      exchange_instance.cm_new_d,
+      exchange_instance.cm_v_d,
+      exchange_instance.ct_bar,
+      exchange_instance.ct_bar_key,
+      proof
+    );
+    const endTime = Date.now();
+    console.log("[Receive] Execution time:", endTime - startTime, "ms");
+
+    expect(await CBDC.isin_list_sn(exchange_instance.sn_cur)).to.be.true;
+  });
+});

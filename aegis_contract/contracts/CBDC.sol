@@ -178,9 +178,7 @@ contract CBDC is BaseMerkleTree {
         require(isin_list_rt(root), "root is not in the list_rt");
         require(isin_list_sn(sn_cur), "sn_cur is in the list_sn");
         require(isin_list_cm(cm_v), "cm_v is in the list_cm");
-        console.log("ct.length: %d", ct.length);
         uint256 tag = compute_tag(ct);
-        console.log("tag: %d", tag);
 
         uint256[] memory input = new uint256[](18);
 
