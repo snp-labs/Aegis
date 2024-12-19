@@ -132,12 +132,10 @@ contract CBDC is BaseMerkleTree {
         return _get_num_leaves();
     }
 
-    function compute_tag(uint256[] memory ct) internal view returns (uint256) {
-        bytes32 _tag = bytes32(ct[0]);
-        for (uint256 i = 1; i < ct.length; i++) {
-            _tag = _hash(_tag, bytes32(ct[i]));
-        }
-        return uint256(_tag);
+    function compute_tag(uint256[] memory ct) internal pure returns (uint256) {
+        uint tag0 = PoseidonHashLib._hash(ct[0], ct[1]);
+        uint tag1 = PoseidonHashLib._hash(ct[2], ct[3]);
+        return PoseidonHashLib._hash(tag0, tag1);
     }
 
     function insert_rt(uint256 root) public {
@@ -180,10 +178,9 @@ contract CBDC is BaseMerkleTree {
         require(isin_list_rt(root), "root is not in the list_rt");
         require(isin_list_sn(sn_cur), "sn_cur is in the list_sn");
         require(isin_list_cm(cm_v), "cm_v is in the list_cm");
-
         uint256 tag = compute_tag(ct);
 
-        uint256[] memory input = new uint256[](8 + ct_bar.length + ct_key.length);
+        uint256[] memory input = new uint256[](18);
 
         input[0] = sn_cur;
         input[1] = cm_new;
@@ -193,11 +190,12 @@ contract CBDC is BaseMerkleTree {
         input[5] = auth;
         input[6] = apk.X;
         input[7] = apk.Y;
-        for (uint256 i = 0; i < ct_bar.length; i++) {
+        
+        for (uint256 i = 0; i < 6; i++) {
             input[i + 8] = ct_bar[i];
         }
-        for (uint256 i = 0; i < ct_key.length; i++) {
-            input[i + 8 + ct_bar.length] = ct_key[i];
+        for (uint256 i = 0; i < 4; i++) {
+            input[i + 14] = ct_key[i];
         }
 
         require(_verify(send_vk, proof, input), "Invalid proof");
