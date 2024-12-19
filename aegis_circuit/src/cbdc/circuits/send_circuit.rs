@@ -536,12 +536,19 @@ where
         });
 
         // tag
-        let tag = Self::H::evaluate(&hash_params.clone(), ct.clone()).unwrap();
+        let ct_0_1 = vec![ct[0].clone(), ct[1].clone()];
+        let ct_2_3 = vec![ct[2].clone(), ct[3].clone()];
+        let tag_0 = Self::H::evaluate(&hash_params.clone(), ct_0_1.clone()).unwrap();
+        let tag_1 = Self::H::evaluate(&hash_params.clone(), ct_2_3.clone()).unwrap();
+        let tag = Self::H::evaluate(&hash_params.clone(), vec![tag_0.clone(), tag_1.clone()]).unwrap();
         println!("tag: {:?}", (tag.to_string()));
 
         // auth
         let auth =
             Self::H::evaluate(&hash_params.clone(), vec![sk_snd_basefield.clone(), tag.clone()]).unwrap();
+
+        // make data for contract test
+        let path = "../aegis_contract/result/";
         let mut data = vec![
             sn_cur.clone().to_string(),
             cm_new.clone().to_string(),
@@ -550,17 +557,33 @@ where
             auth.clone().to_string(),
             apk.clone().x().unwrap().clone().to_string(),
             apk.clone().y().unwrap().clone().to_string(),
-        ];
-        data.extend(ct_bar.clone().iter().map(|c| c.to_string())); // 7
+        ]; // 0 ~ 6
+        data.extend(ct_bar.clone().iter().map(|c| c.to_string())); // 7 ~ 12
         data.extend(vec![
             G_r_auth.clone().x().unwrap().clone().to_string(),
             G_r_auth.clone().y().unwrap().clone().to_string(),
             K_a_auth.clone().x().unwrap().clone().to_string(),
             K_a_auth.clone().y().unwrap().clone().to_string(),
-        ]);
-        data.extend(ct.clone().iter().map(|c| c.to_string())); // 11
+        ]); // 13 ~ 16
+        println!("ct length: {:?}", ct.len());
+        data.extend(ct.clone().iter().map(|c| c.to_string())); // 17 ~ 20
 
+        let mut input_for_json = vec![];
 
+        for i in data.iter() {
+            input_for_json.push(i.to_string());
+        }
+
+        let json_data = serde_json::to_string(&input_for_json)
+            .expect("벡터를 JSON으로 변환하는 데 실패했습니다.");
+        
+        // 파일에 저장
+        let mut file = File::create(&format!("{}{}", path, "send/send.input.json"))
+            .expect("파일 생성에 실패했습니다.");
+        file.write_all(json_data.as_bytes())
+            .expect("파일에 JSON 데이터를 쓰는 데 실패했습니다.");
+
+        
         let instance = SendInstance {
             sn_cur: Some(sn_cur),
             cm_new: Some(cm_new),

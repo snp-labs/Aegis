@@ -12,7 +12,7 @@ mod send_tests {
         pub static ref PRF_FILE: String = "send.proof.dat".to_string();
     }
 
-    const TREE_HEIGHT: u64 = 33;
+    const TREE_HEIGHT: u64 = 32;
 
     #[test]
     fn test_constraints() {
@@ -125,29 +125,17 @@ mod send_tests {
             test_input.instance.auth.clone().unwrap(),
             *test_input.instance.apk.clone().unwrap().x().unwrap(),
             *test_input.instance.apk.clone().unwrap().y().unwrap(),
-        ]);
-        image.append(&mut test_input.instance.ct_bar.clone().unwrap());
+        ]); // 0 ~ 7
+        println!("ct_bar.len(): {:?}", test_input.instance.ct_bar.clone().unwrap().len());
+        image.append(&mut test_input.instance.ct_bar.clone().unwrap()); // 8 ~ 13
         image.append(&mut vec![
             *test_input.instance.g_r.clone().unwrap().x().unwrap(),
             *test_input.instance.g_r.clone().unwrap().y().unwrap(),
             *test_input.instance.k_a.clone().unwrap().x().unwrap(),
             *test_input.instance.k_a.clone().unwrap().y().unwrap(),
-        ]);
+        ]); // 14 ~ 17
 
-        let mut input_for_json = vec![];
-        for i in image.iter() {
-            input_for_json.push(i.to_string());
-        }
-
-        let json_data = serde_json::to_string(&input_for_json)
-            .expect("벡터를 JSON으로 변환하는 데 실패했습니다.");
-        
-        // 파일에 저장
-        let mut file = File::create(&format!("{}{}", path, "send/send.input.json"))
-            .expect("파일 생성에 실패했습니다.");
-        file.write_all(json_data.as_bytes())
-            .expect("파일에 JSON 데이터를 쓰는 데 실패했습니다.");
-
+        println!("image.len(): {}", image.len());
         let c = test_input.clone();
         println!("Generate proof!");
         let proof = Groth16::<Bn254>::prove(&pk, c.clone(), &mut rng).unwrap();
