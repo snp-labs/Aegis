@@ -1,6 +1,15 @@
-pub type Error = anyhow::Error;
+pub mod crypto;
+pub mod gro;
+pub mod linker;
+pub mod snark;
+pub mod solidity;
 
-pub mod cbdc;
-pub mod gadget;
-pub mod utils;
-pub mod keys;
+#[macro_use]
+extern crate ark_std;
+
+#[cfg(feature = "r1cs")]
+#[macro_use]
+extern crate derivative;
+
+#[cfg(test)]
+mod tests;

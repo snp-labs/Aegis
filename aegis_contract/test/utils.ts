@@ -132,7 +132,7 @@ function preprocessedVK(vk: any): string[] {
     let startTime: number = Date.now();
   
     for (let i = 0; i < iter; i++) {
-      let tx = await transactionFunction(...args); // 가변 인자로 함수 호출
+      let tx = await transactionFunction(...args);
       const receipt = await tx.wait();
       if (receipt) {
         totalGasUsed += BigInt(receipt.gasUsed);
@@ -140,14 +140,14 @@ function preprocessedVK(vk: any): string[] {
     }
   
     let endTime: number = Date.now();
-    const totalTime: number = (endTime - startTime) / 1000; // 초 단위로 변환
+    const totalTime: number = (endTime - startTime) / 1000;
     const tps: number = iter / totalTime;
   
-    console.log(`총 가스 소비량: ${totalGasUsed.toString()}`);
-    console.log(`총 수행 시간: ${totalTime} 초`);
+    console.log(`Total gas used: ${totalGasUsed.toString()}`);
+    console.log(`Total execution time: ${totalTime} seconds`);
     console.log(`TPS: ${tps}`);
-    console.log(`한 트랜잭션당 소요 시간: ${totalTime / iter} 초`);
-    console.log(`한 트랜잭션당 가스 소비량: ${totalGasUsed / BigInt(iter)}`);
+    console.log(`Time per transaction: ${totalTime / iter} seconds`);
+    console.log(`Gas used per transaction: ${totalGasUsed / BigInt(iter)}`);
   }
 
 export { preprocessedVK, preprocessedProof, preprocessedInput, preprocessedSendInstance, preprocessedExchangeInstance, preprocessedRegisterInstance, preprocessedReceiveInstance, transactionPerformance };
