@@ -12,7 +12,7 @@
 </p>
 
 > ℹ️ **Note:**
-> This repository contains a implementation of [**Aegis**](https://your-link.example).
+> This repository contains a implementation of [**Aegis**](https://eprint.iacr.org/2025/539).
 
 > ⚠️ **Warning:**
 > Do not use this project in production.  
