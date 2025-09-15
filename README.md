@@ -33,20 +33,21 @@
 ### 1. Clone & Install
 ```bash
 git clone https://github.com/snp-labs/Aegis.git
-cd aegis
+cd Aegis
 ```
 
 ### 2. Environment Setup
 Before running circuit tests, copy the example environment file:
 ```bash
-cp env.example .env
+cd aegis_circuit
+cp .env.example .env
 ```
 Make sure to adjust any required values in .env according to your setup.
 
 
 ### 3. Circuit Tests
 ```bash
-cd aegis_circuit/src/tests
+cd src/tests
 sh run_tests.sh
 ```
 - This file includes detailed performance metrics, such as:
