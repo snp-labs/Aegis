@@ -1,7 +1,6 @@
 [package]
 name = "cc-snark"
 version = "0.1.0"
-authors = ["kwonhojeong@hanyang.ac.kr", "sunjbs98@gmail.com"]
 categories = ["cryptography"]
 include = ["Cargo.toml", "src", "README.md"]
 edition = "2021"
