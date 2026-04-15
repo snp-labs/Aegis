@@ -4,17 +4,15 @@ use ark_ff::Zero;
 use ark_r1cs_std::eq::EqGadget;
 use ark_r1cs_std::{
     alloc::AllocVar,
-    bits::ToBitsGadget,
     fields::{fp::FpVar, FieldVar},
     prelude::Boolean,
 };
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use rand::{CryptoRng, RngCore};
-use rayon::prelude::*; // Add this line
-use std::fs::File;
-use std::fs::OpenOptions;
+use rayon::prelude::*;
+use std::fs::{create_dir_all, metadata, File, OpenOptions};
 use std::io::Write;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::crypto::commitment;
 use crate::solidity::Solidity;
@@ -25,6 +23,7 @@ use crate::{
     },
     gro::{CCGroth16, Commitment, CommittingKey, Proof, ProvingKey, VerifyingKey},
     snark::{CircuitSpecificSetupCCSNARK, CCSNARK},
+    utils::format_duration_2dp,
 };
 
 fn test_delta_commitment<F: PrimeField>(num_commitments: usize, length: usize) -> Vec<Vec<F>> {
@@ -129,15 +128,16 @@ impl<C: CurveGroup> ConstraintSynthesizer<C::ScalarField> for AegisCircuit<C> {
             sum += delta[0].clone();
             delta_commitments.push(delta);
 
+            let (curr_bits_64, _) = curr[0].to_bits_le_with_top_bits_zero(64)?;
             Boolean::enforce_smaller_or_equal_than_le(
-                curr[0].to_non_unique_bits_le().unwrap().as_slice(),
+                curr_bits_64.as_slice(),
                 constant_max.into_bigint(),
             )?;
         }
 
-        // let zero = FpVar::<C::ScalarField>::zero();
-        // sum.enforce_equal(&zero)
-        //     .expect("Summation of delta amounts must be zero.");
+        let zero = FpVar::<C::ScalarField>::zero();
+        sum.enforce_equal(&zero)
+            .expect("Summation of delta amounts must be zero.");
 
         let commitments =
             [current_commitments, delta_commitments].concat::<Vec<FpVar<C::ScalarField>>>();
@@ -217,15 +217,11 @@ fn aegis_circuit_prove_and_verify<E: Pairing, R: RngCore + CryptoRng>(
     commitments: &Vec<E::G1Affine>,
     proof_dependent_commitment: &Commitment<E>,
     rng: &mut R,
-) -> Proof<E> {
-    let mut file = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .create(true)
-        .open("./src/tests/circuit_result.txt")
-        .unwrap();
+) -> (Proof<E>, Duration, Duration, Duration) {
+    let prove_start = Instant::now();
     let proof = CCGroth16::<E>::prove(&pk, circuit.clone(), &proof_dependent_commitment, rng)
         .expect("Failed: Proof Generation");
+    let prove_time = prove_start.elapsed();
 
     let tau = circuit.tau.unwrap();
     let public_inputs = [tau];
@@ -235,7 +231,6 @@ fn aegis_circuit_prove_and_verify<E: Pairing, R: RngCore + CryptoRng>(
     let (aggregation_g1, _) = Pedersen::<E::G1>::aggregate(commitments, tau, None);
     end_timer!(aggregate_timer);
     let aggregate_time = aggregate_start.elapsed();
-    writeln!(file, "Aggregate: {:?}", aggregate_time).unwrap();
 
     let mut verify = proof.clone();
     let aggregation = aggregation_g1.into_group();
@@ -249,11 +244,14 @@ fn aegis_circuit_prove_and_verify<E: Pairing, R: RngCore + CryptoRng>(
     );
     verify.d = (aggregation + verify.d.into_group()).into_affine();
 
+    let verify_start = Instant::now();
     assert!(
         CCGroth16::<E>::verify(&vk, &public_inputs, &verify).unwrap(),
         "Invalid Proof"
     );
-    proof
+    let verify_time = verify_start.elapsed();
+
+    (proof, prove_time, aggregate_time, verify_time)
 }
 
 fn test_commitments<F: PrimeField>(num_commitments: usize, length: usize) -> Vec<Vec<F>> {
@@ -277,28 +275,27 @@ fn aegis_circuit_solidity<E: Pairing>(
     E::G2Affine: Solidity,
     E::ScalarField: Solidity,
 {
-    let mut file =
-        File::create("../aegis_contract/result/dbtData.ts").expect("Unable to create file");
+    let result_dir = "../aegis_contract/result";
+    create_dir_all(result_dir).expect("Unable to create result directory");
+    let output_path = format!("{}/dbtData.batch_{}.json", result_dir, batch_size);
+    let mut file = File::create(output_path).expect("Unable to create json file");
 
-    writeln!(file, "const batchSize = {}", batch_size).unwrap();
-    writeln!(file, "const vk = {:?}", vk.to_solidity()).unwrap();
-    writeln!(file, "const ck = {:?}", vk.ck.batch_g1.to_solidity()).unwrap();
-    writeln!(
-        file,
-        "const cm = {:?}",
-        vec![cm[batch_size], cm[batch_size + 1]].to_solidity()
+    let payload = serde_json::json!({
+        "batchSize": batch_size,
+        "vk": vk.to_solidity(),
+        "ck": vk.ck.batch_g1.to_solidity(),
+        "dbt": {
+            "cm": vec![cm[batch_size], cm[batch_size + 1]].to_solidity(),
+            "proof": proof.to_solidity()
+        },
+        "prevCm": prev_cm[0].to_solidity()
+    });
+    file.write_all(
+        serde_json::to_string_pretty(&payload)
+            .expect("Unable to serialize json")
+            .as_bytes(),
     )
-    .unwrap();
-    writeln!(file, "const prevCm = {:?}", prev_cm[0].to_solidity()).unwrap();
-    writeln!(file, "const proof = {:?}", proof.to_solidity()).unwrap();
-    writeln!(file, "const dbt = {{ cm: cm, proof: proof }}").unwrap();
-    writeln!(
-        file,
-        "\nconst batch{} = {{ batchSize, vk, ck, dbt, prevCm }}",
-        batch_size
-    )
-    .unwrap();
-    writeln!(file, "\nexport default batch{}\n", batch_size).unwrap();
+    .expect("Unable to write json file");
 }
 
 pub mod bn254 {
@@ -384,28 +381,35 @@ pub mod bn254 {
             .write(true)
             .append(true)
             .create(true)
-            .open("./src/tests/circuit_result.txt")
+            .open("./src/tests/circuit_result.csv")
             .unwrap();
-        writeln!(
-            file,
-            "================== Thread: {:?} ==================",
-            rayon::current_num_threads()
-        )
-        .unwrap();
+        if metadata("./src/tests/circuit_result.csv")
+            .map(|m| m.len() == 0)
+            .unwrap_or(true)
+        {
+            writeln!(
+                file,
+                "thread,batch_size,constraints,setup,commit,prover,aggregate,verifier"
+            )
+            .unwrap();
+        }
+
+        let thread = rayon::current_num_threads();
         for n in *LOG_MIN..=*LOG_MAX {
-            println!("Rayon thread pool size: {}", rayon::current_num_threads());
+            println!("Rayon thread pool size: {}", thread);
             let batch_size = 1 << n;
             println!("batch size: {}", batch_size);
-            writeln!(file, "batch size: {}", batch_size).unwrap();
 
             let cs = ark_relations::r1cs::ConstraintSystem::<F>::new_ref();
 
             AegisCircuit::<C>::mock(batch_size)
                 .generate_constraints(cs.clone())
                 .unwrap();
-            writeln!(file, "number of constraints: {}", cs.num_constraints()).unwrap();
+            let constraints = cs.num_constraints();
 
+            let setup_start = Instant::now();
             let (pk, vk, ck) = aegis_circuit_setup::<E, R>(batch_size, &mut rng);
+            let setup_time = setup_start.elapsed();
 
             let cm_prev = test_commitments::<F>(batch_size, 2);
             let cm_delta = test_delta_commitment::<F>(batch_size, 2);
@@ -421,13 +425,15 @@ pub mod bn254 {
                 .collect::<Vec<_>>();
 
             // commit
+            let commit_start = Instant::now();
             let (cm_g1, d, tau) =
                 aegis_circuit_commit(&ck, &cm_prev, &cm_delta, &cm_curr, &mut rng);
+            let commit_time = commit_start.elapsed();
             // print!("tau: {}\n", tau.to_string());
 
             let circuit = AegisCircuit::<C>::new(tau, cm_curr, cm_prev.clone());
 
-            let proof =
+            let (proof, prove_time, aggregate_time, verify_time) =
                 aegis_circuit_prove_and_verify(&pk, &vk, circuit.clone(), &cm_g1, &d, &mut rng);
 
             // make a prev_cm_g1
@@ -435,6 +441,20 @@ pub mod bn254 {
             let prev_cm_g1 = batch_commit(&ck, &a_cm_prev);
 
             aegis_circuit_solidity(batch_size, &cm_g1, &proof, &vk, &prev_cm_g1);
+
+            writeln!(
+                file,
+                "{},{},{},{},{},{},{},{}",
+                thread,
+                batch_size,
+                constraints,
+                format_duration_2dp(setup_time),
+                format_duration_2dp(commit_time),
+                format_duration_2dp(prove_time),
+                format_duration_2dp(aggregate_time),
+                format_duration_2dp(verify_time)
+            )
+            .unwrap();
         }
         // }
     }

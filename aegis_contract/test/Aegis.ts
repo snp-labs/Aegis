@@ -1,15 +1,36 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { Aegis, Aegis__factory } from "../typechain-types";
 import { ethers } from "hardhat";
-import batch1024 from "../result/dbtData";
 import { Bn128 } from "../typechain-types/contracts/Aegis";
+import fs from "fs";
+import path from "path";
+
+type BatchArtifact = {
+  batchSize: number;
+  vk: string[];
+  ck: string[];
+  dbt: {
+    cm: string[];
+    proof: string[];
+  };
+  prevCm: string[];
+};
+
+function readBatchArtifact(): BatchArtifact {
+  const batch = Number(process.env.AEGIS_BATCH ?? "1024");
+  const file = path.resolve(__dirname, `../result/dbtData.batch_${batch}.json`);
+  if (!fs.existsSync(file)) {
+    throw new Error(`Batch artifact not found: ${file}`);
+  }
+  return JSON.parse(fs.readFileSync(file, "utf-8")) as BatchArtifact;
+}
 
 describe("Aegis", () => {
   let Aegis: Aegis;
   let signer: SignerWithAddress;
   let vrsStruct: Aegis.VrsStruct;
 
-  const batch = batch1024;
+  const batch = readBatchArtifact();
   const BATCH_SIZE = batch.batchSize;
   const addresses = createAddress(BATCH_SIZE);
   let deltacm1: Bn128.G1PointStruct = {

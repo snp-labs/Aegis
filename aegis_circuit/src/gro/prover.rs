@@ -1,4 +1,5 @@
 use crate::crypto::commitment::{pedersen::Pedersen, CommitmentScheme};
+use crate::utils::format_duration_2dp;
 
 use super::{
     r1cs_to_qap::R1CSToQAP, CCGroth16, Commitment, CommittingKey, Proof, ProvingKey, VerifyingKey,
@@ -16,8 +17,6 @@ use ark_std::{
     ops::{AddAssign, Mul},
     vec::Vec,
 };
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::time::Instant;
 
 #[cfg(feature = "parallel")]
@@ -50,15 +49,8 @@ impl<E: Pairing, QAP: R1CSToQAP> CCGroth16<E, QAP> {
         end_timer!(proof_dependent_time);
         end_timer!(commit_time);
         let commit_time = commit_start.elapsed();
-        println!("Commit: {:?}", commit_time);
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .create(true)
-            .open("./src/tests/circuit_result.txt")
-            .unwrap();
-        writeln!(file, "Commit: {:?}", commit_time).unwrap();
-
+        let commit_time_fmt = format_duration_2dp(commit_time);
+        println!("Commit: {}", commit_time_fmt);
         Ok(commitment)
     }
 
@@ -280,15 +272,8 @@ impl<E: Pairing, QAP: R1CSToQAP> CCGroth16<E, QAP> {
 
         end_timer!(prover_time);
         let prover_time = prover_start.elapsed();
-        println!("Prover: {:?}", prover_time);
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .create(true)
-            .open("./src/tests/circuit_result.txt")
-            .unwrap();
-        writeln!(file, "Prover: {:?}", prover_time).unwrap();
-
+        let prover_time_fmt = format_duration_2dp(prover_time);
+        println!("Prover: {}", prover_time_fmt);
         Ok(proof)
     }
 

@@ -1,5 +1,6 @@
 use super::{r1cs_to_qap::R1CSToQAP, CCGroth16, CommittingKey, ProvingKey, VerifyingKey};
-use ark_ec::{pairing::Pairing, scalar_mul::fixed_base::FixedBase, CurveGroup};
+use crate::utils::format_duration_2dp;
+use ark_ec::{pairing::Pairing, scalar_mul::BatchMulPreprocessing, CurveGroup};
 use ark_ff::{Field, PrimeField, UniformRand, Zero};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_relations::r1cs::{
@@ -7,8 +8,6 @@ use ark_relations::r1cs::{
     SynthesisError, SynthesisMode,
 };
 use ark_std::{cfg_into_iter, cfg_iter, rand::Rng, vec::Vec};
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::time::Instant;
 
 #[cfg(feature = "parallel")]
@@ -121,8 +120,6 @@ impl<E: Pairing, QAP: R1CSToQAP> CCGroth16<E, QAP> {
             .map(|i| usize::from(!b[i].is_zero()))
             .sum();
 
-        let scalar_bits = E::ScalarField::MODULUS_BIT_SIZE as usize;
-
         let gamma_inverse = gamma.inverse().ok_or(SynthesisError::UnexpectedIdentity)?;
         let delta_inverse = delta.inverse().ok_or(SynthesisError::UnexpectedIdentity)?;
 
@@ -142,21 +139,26 @@ impl<E: Pairing, QAP: R1CSToQAP> CCGroth16<E, QAP> {
 
         // Compute B window table
         let g2_time = start_timer!(|| "Compute G2 table");
-        let g2_window = FixedBase::get_mul_window_size(non_zero_b);
-        let g2_table = FixedBase::get_window_table::<E::G2>(scalar_bits, g2_window, g2_generator);
+        let g2_table = BatchMulPreprocessing::with_num_scalars_and_scalar_size(
+            g2_generator,
+            non_zero_b,
+            E::ScalarField::MODULUS_BIT_SIZE as usize,
+        );
         end_timer!(g2_time);
 
         // Compute the B-query in G2
         let b_g2_time = start_timer!(|| format!("Calculate B G2 of size {}", b.len()));
-        let b_g2_query = FixedBase::msm::<E::G2>(scalar_bits, g2_window, &g2_table, &b);
+        let b_g2_query = g2_table.batch_mul(&b);
         drop(g2_table);
         end_timer!(b_g2_time);
 
         // Compute G window table
         let g1_window_time = start_timer!(|| "Compute G1 window table");
-        let g1_window =
-            FixedBase::get_mul_window_size(non_zero_a + non_zero_b + qap_num_variables + m_raw + 1);
-        let g1_table = FixedBase::get_window_table::<E::G1>(scalar_bits, g1_window, g1_generator);
+        let g1_table = BatchMulPreprocessing::with_num_scalars_and_scalar_size(
+            g1_generator,
+            non_zero_a + non_zero_b + qap_num_variables + m_raw + 1,
+            E::ScalarField::MODULUS_BIT_SIZE as usize,
+        );
         end_timer!(g1_window_time);
 
         // Generate the R1CS proving key
@@ -170,29 +172,30 @@ impl<E: Pairing, QAP: R1CSToQAP> CCGroth16<E, QAP> {
 
         // Compute the A-query
         let a_time = start_timer!(|| "Calculate A");
-        let a_query = FixedBase::msm::<E::G1>(scalar_bits, g1_window, &g1_table, &a);
+        let a_query = g1_table.batch_mul(&a);
         drop(a);
         end_timer!(a_time);
 
         // Compute the B-query in G1
         let b_g1_time = start_timer!(|| "Calculate B G1");
-        let b_g1_query = FixedBase::msm::<E::G1>(scalar_bits, g1_window, &g1_table, &b);
+        let b_g1_query = g1_table.batch_mul(&b);
         drop(b);
         end_timer!(b_g1_time);
 
         // Compute the H-query
         let h_time = start_timer!(|| "Calculate H");
-        let h_query = FixedBase::msm::<E::G1>(
-            scalar_bits,
-            g1_window,
-            &g1_table,
-            &QAP::h_query_scalars::<_, D<E::ScalarField>>(m_raw - 1, t, zt, delta_inverse)?,
-        );
+        let h_query = g1_table
+            .batch_mul(&QAP::h_query_scalars::<_, D<E::ScalarField>>(
+                m_raw - 1,
+                t,
+                zt,
+                delta_inverse,
+            )?);
         end_timer!(h_time);
 
         // Compute the L-query
         let l_time = start_timer!(|| "Calculate L");
-        let l_query = FixedBase::msm::<E::G1>(scalar_bits, g1_window, &g1_table, &l);
+        let l_query = g1_table.batch_mul(&l);
         drop(l);
         end_timer!(l_time);
 
@@ -205,7 +208,7 @@ impl<E: Pairing, QAP: R1CSToQAP> CCGroth16<E, QAP> {
         let commitment_key_time = start_timer!(|| "Generate ccSNARK commiting key");
         let gamma_eta_g1 = g1_generator * (gamma_inverse * &eta);
         let delta_eta_g1 = g1_generator * (delta_inverse * &eta);
-        let gamma_abc_g1 = FixedBase::msm::<E::G1>(scalar_bits, g1_window, &g1_table, &gamma_abc);
+        let gamma_abc_g1 = g1_table.batch_mul(&gamma_abc);
 
         // public inputs: [1, ...PI] (with challenges for aggregation)
         let (gamma_abc_g1, ck_g1) = gamma_abc_g1.split_at(num_instance_variables);
@@ -220,8 +223,8 @@ impl<E: Pairing, QAP: R1CSToQAP> CCGroth16<E, QAP> {
         let (batch_g1, proof_dependent_g1) = ck_g1.split_at(num_aggregation_variables);
 
         let ck = CommittingKey {
-            batch_g1: E::G1::normalize_batch(batch_g1),
-            proof_dependent_g1: E::G1::normalize_batch(proof_dependent_g1),
+            batch_g1: batch_g1.to_vec(),
+            proof_dependent_g1: proof_dependent_g1.to_vec(),
             gamma_eta_g1: gamma_eta_g1.into_affine(),
             delta_eta_g1: delta_eta_g1.into_affine(),
         };
@@ -232,28 +235,22 @@ impl<E: Pairing, QAP: R1CSToQAP> CCGroth16<E, QAP> {
             beta_g2: beta_g2.into_affine(),
             gamma_g2: gamma_g2.into_affine(),
             delta_g2: delta_g2.into_affine(),
-            gamma_abc_g1: E::G1::normalize_batch(gamma_abc_g1),
+            gamma_abc_g1: gamma_abc_g1.to_vec(),
         };
 
         let batch_normalization_time = start_timer!(|| "Convert proving key elements to affine");
-        let a_query = E::G1::normalize_batch(&a_query);
-        let b_g1_query = E::G1::normalize_batch(&b_g1_query);
-        let b_g2_query = E::G2::normalize_batch(&b_g2_query);
-        let h_query = E::G1::normalize_batch(&h_query);
-        let l_query = E::G1::normalize_batch(&l_query);
+        let a_query = a_query;
+        let b_g1_query = b_g1_query;
+        let b_g2_query = b_g2_query;
+        let h_query = h_query;
+        let l_query = l_query;
         end_timer!(batch_normalization_time);
 
         let setup_elapsed = setup_start.elapsed();
+        let setup_elapsed_fmt = format_duration_2dp(setup_elapsed);
         end_timer!(setup_time);
 
-        println!("Setup: {:?}\n", setup_elapsed);
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .create(true)
-            .open("./src/tests/circuit_result.txt")
-            .unwrap();
-        writeln!(file, "Setup: {:?}", setup_elapsed).unwrap();
+        println!("Setup: {}\n", setup_elapsed_fmt);
         Ok(ProvingKey {
             vk,
             beta_g1: beta_g1.into_affine(),

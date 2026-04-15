@@ -3,6 +3,7 @@ pub mod gro;
 pub mod linker;
 pub mod snark;
 pub mod solidity;
+pub mod utils;
 
 #[macro_use]
 extern crate ark_std;

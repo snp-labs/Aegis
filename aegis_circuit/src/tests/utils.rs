@@ -28,14 +28,11 @@ impl<T: Clone> Transpose<Vec<T>> for Vec<T> {
 }
 
 pub fn format_time(microseconds: u128) -> String {
-    if microseconds >= 1_000_000 {
-        let seconds = microseconds as f64 / 1_000_000.0;
-        format!("{:.3} s", seconds)
-    } else if microseconds >= 1_000 {
-        let milliseconds = microseconds as f64 / 1_000.0;
-        format!("{:.3} ms", milliseconds)
+    let ms = microseconds as f64 / 1_000.0;
+    if ms >= 1_000.0 {
+        format!("{:.2} s", ms / 1_000.0)
     } else {
-        format!("{} µs", microseconds)
+        format!("{:.2} ms", ms)
     }
 }
 
