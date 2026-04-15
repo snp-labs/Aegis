@@ -90,7 +90,7 @@ describe("Aegis Verify Performance By Batch", function () {
 
   const artifacts = readBatchArtifacts();
   const iterations = Number(process.env.VERIFY_ITERS ?? "3");
-  const maxBatch = Number(process.env.MAX_VERIFY_BATCH ?? "4096");
+  const maxBatch = Number(process.env.MAX_VERIFY_BATCH ?? "32768");
   const txGasLimit = process.env.VERIFY_TX_GAS_LIMIT
     ? BigInt(process.env.VERIFY_TX_GAS_LIMIT)
     : undefined;

@@ -6,9 +6,9 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       chainId: 1337,
-      blockGasLimit: 1000000000,
+      blockGasLimit: 30000000000,
       accounts: {
-        accountsBalance: '10500000000000000000'
+        accountsBalance: '10000000000000000000000'
       },
     }
   },
