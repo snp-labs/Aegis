@@ -20,6 +20,7 @@ type PerfRow = {
   iterations: number;
   avgTimeLabel: string;
   avgGas: bigint;
+  avgTps: number;
 };
 
 function formatAvgTime(avgTimeMs: number): string {
@@ -90,7 +91,7 @@ describe("Aegis Verify Performance By Batch", function () {
 
   const artifacts = readBatchArtifacts();
   const iterations = Number(process.env.VERIFY_ITERS ?? "3");
-  const maxBatch = Number(process.env.MAX_VERIFY_BATCH ?? "32768");
+  const maxBatch = Number(process.env.MAX_VERIFY_BATCH ?? "4096");
   const txGasLimit = process.env.VERIFY_TX_GAS_LIMIT
     ? BigInt(process.env.VERIFY_TX_GAS_LIMIT)
     : undefined;
@@ -98,13 +99,14 @@ describe("Aegis Verify Performance By Batch", function () {
 
   after(() => {
     const csvPath = path.resolve(__dirname, "../result/verify_perf.csv");
-    const header = "batch_size,iterations,avg_time,avg_gas";
+    const header = "batch_size,iterations,avg_time,avg_gas,avg_tps";
     const lines = rows.map((r) =>
       [
         r.batchSize,
         r.iterations,
         r.avgTimeLabel,
         r.avgGas.toString(),
+        r.avgTps.toFixed(2),
       ].join(",")
     );
     fs.writeFileSync(csvPath, [header, ...lines].join("\n"));
@@ -154,18 +156,20 @@ describe("Aegis Verify Performance By Batch", function () {
       const avgTimeMs = (totalTimeSec * 1000) / iterations;
       const avgTimeLabel = formatAvgTime(avgTimeMs);
       const avgGas = totalGasUsed / BigInt(iterations);
+      const avgTps = totalTimeSec > 0 ? iterations / totalTimeSec : 0;
 
       rows.push({
         batchSize: artifact.batchSize,
         iterations,
         avgTimeLabel,
         avgGas,
+        avgTps,
       });
 
       console.log(
         `[verify] batch=${artifact.batchSize}, iter=${iterations}, totalTimeSec=${totalTimeSec.toFixed(
           3
-        )}, avgTime=${avgTimeLabel}, avgGas=${avgGas.toString()}`
+        )}, avgTime=${avgTimeLabel}, avgGas=${avgGas.toString()}, avgTps=${avgTps.toFixed(2)}`
       );
     });
   }

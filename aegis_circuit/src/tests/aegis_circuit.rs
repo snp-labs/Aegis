@@ -14,7 +14,6 @@ use std::fs::{create_dir_all, metadata, File, OpenOptions};
 use std::io::Write;
 use std::time::{Duration, Instant};
 
-use crate::crypto::commitment;
 use crate::solidity::Solidity;
 use crate::{
     crypto::commitment::{
@@ -303,7 +302,7 @@ pub mod bn254 {
 
     use crate::{
         gro::VerifyingKeyIO,
-        tests::{LOG_MAX, LOG_MIN, THREAD},
+        tests::{utils::format_duration_s_2dp, LOG_MAX, LOG_MIN, THREAD},
     };
 
     use super::*;
@@ -377,24 +376,22 @@ pub mod bn254 {
     #[test]
     fn aegis_circuit_scenario() {
         let mut rng = R::seed_from_u64(test_rng().next_u64());
+        let thread = rayon::current_num_threads();
+        let result_path = format!("./src/tests/circuit_result.thread_{}.csv", thread);
         let mut file = OpenOptions::new()
             .write(true)
             .append(true)
             .create(true)
-            .open("./src/tests/circuit_result.csv")
+            .open(&result_path)
             .unwrap();
-        if metadata("./src/tests/circuit_result.csv")
-            .map(|m| m.len() == 0)
-            .unwrap_or(true)
-        {
+        if metadata(&result_path).map(|m| m.len() == 0).unwrap_or(true) {
             writeln!(
                 file,
-                "thread,batch_size,constraints,setup,commit,prover,aggregate,verifier"
+                "thread,batch_size,constraints,setup,commit,prover,total_prover,aggregate,verifier,total_verifier,ek_size_kb,vk_size_b"
             )
             .unwrap();
         }
 
-        let thread = rayon::current_num_threads();
         for n in *LOG_MIN..=*LOG_MAX {
             println!("Rayon thread pool size: {}", thread);
             let batch_size = 1 << n;
@@ -410,6 +407,14 @@ pub mod bn254 {
             let setup_start = Instant::now();
             let (pk, vk, ck) = aegis_circuit_setup::<E, R>(batch_size, &mut rng);
             let setup_time = setup_start.elapsed();
+            let mut pk_bytes = Vec::new();
+            pk.serialize_compressed(&mut pk_bytes).unwrap();
+            let ek_size_kb = pk_bytes.len() / 1024;
+
+            let vk_io = VerifyingKeyIO::from_vk(&vk);
+            let mut vk_bytes = Vec::new();
+            vk_io.serialize_compressed(&mut vk_bytes).unwrap();
+            let vk_size_b = vk_bytes.len();
 
             let cm_prev = test_commitments::<F>(batch_size, 2);
             let cm_delta = test_delta_commitment::<F>(batch_size, 2);
@@ -435,6 +440,8 @@ pub mod bn254 {
 
             let (proof, prove_time, aggregate_time, verify_time) =
                 aegis_circuit_prove_and_verify(&pk, &vk, circuit.clone(), &cm_g1, &d, &mut rng);
+            let total_prover_time = commit_time + prove_time;
+            let total_verifier_time = aggregate_time + verify_time;
 
             // make a prev_cm_g1
             let a_cm_prev = test_commitments(1, 2);
@@ -444,15 +451,19 @@ pub mod bn254 {
 
             writeln!(
                 file,
-                "{},{},{},{},{},{},{},{}",
+                "{},{},{},{},{},{},{},{},{},{},{},{}",
                 thread,
                 batch_size,
                 constraints,
-                format_duration_2dp(setup_time),
+                format_duration_s_2dp(setup_time),
                 format_duration_2dp(commit_time),
-                format_duration_2dp(prove_time),
+                format_duration_s_2dp(prove_time),
+                format_duration_s_2dp(total_prover_time),
                 format_duration_2dp(aggregate_time),
-                format_duration_2dp(verify_time)
+                format_duration_2dp(verify_time),
+                format_duration_2dp(total_verifier_time),
+                ek_size_kb,
+                vk_size_b
             )
             .unwrap();
         }

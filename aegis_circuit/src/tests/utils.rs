@@ -1,6 +1,6 @@
 use ark_serialize::CanonicalSerialize;
 use dotenv::dotenv;
-use std::{env, str::FromStr};
+use std::{env, str::FromStr, time::Duration};
 
 pub trait Average<T> {
     fn average(&self) -> T;
@@ -46,4 +46,8 @@ pub fn compressed_key_size<K: CanonicalSerialize>(key: &K) -> usize {
     let mut buffer = vec![];
     key.serialize_compressed(&mut buffer).unwrap();
     buffer.len()
+}
+
+pub fn format_duration_s_2dp(duration: Duration) -> String {
+    format!("{:.2} s", duration.as_secs_f64())
 }
